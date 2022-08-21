@@ -1,0 +1,23 @@
+[project]
+name = "py-partiql-parser"
+version = "0.1.0"
+description = ""
+authors = [{name="Bert Blommers", email="info@bertblommers.nl"}]
+requires-python = ">=3.6"
+
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "black=^22.6.0",
+    "mypy=^0.971",
+    "sure=^2.0.0",
+    "pytest=^5.2",
+]
+
+[build-system]
+requires = [
+    "setuptools >= 35.0.2",
+    "setuptools_scm >= 2.0.0, <3"
+]
+build-backend = "setuptools.build_meta"
