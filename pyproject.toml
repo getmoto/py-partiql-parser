@@ -3,7 +3,6 @@ name = "py-partiql-parser"
 version = "0.1.0"
 description = ""
 authors = [{name="Bert Blommers", email="info@bertblommers.nl"}]
-requires-python = ">=3.6"
 
 dependencies = []
 
@@ -17,7 +16,7 @@ dev = [
 
 [build-system]
 requires = [
-    "setuptools >= 35.0.2",
-    "setuptools_scm >= 2.0.0, <3"
+    "setuptools>=59.0.0",
+    "wheel"
 ]
 build-backend = "setuptools.build_meta"
