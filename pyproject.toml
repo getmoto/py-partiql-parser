@@ -9,10 +9,10 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = [
-    "black=^22.6.0",
-    "mypy=^0.971",
-    "sure=^2.0.0",
-    "pytest=^5.2",
+    "black==22.6.0",
+    "mypy==0.971",
+    "sure==2.0.0",
+    "pytest==5.2"
 ]
 
 [build-system]
