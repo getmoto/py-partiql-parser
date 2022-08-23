@@ -1,4 +1,4 @@
-from typing import Optional, AnyStr
+from typing import Optional, AnyStr, List
 
 
 class ClauseTokenizer:
@@ -18,6 +18,9 @@ class ClauseTokenizer:
         except IndexError:
             return None
 
+    def revert(self):
+        self.token_pos -= 1
+
     def skip_white_space(self) -> None:
         try:
             while self.token_list[self.token_pos] == " ":
@@ -25,15 +28,24 @@ class ClauseTokenizer:
         except IndexError:
             pass
 
-    def next_until(self, c) -> str:
+    def next_until(self, chars: List[str]) -> str:
         """
-        Return the following characters up until (but not including) the next occurrence of c
-        :param c:
+        Return the following characters up until (but not including) any of the characters defined in chars
+        :param chars:
         :return:
         """
         phrase = ""
         crnt = self.next()
-        while crnt and crnt != c:
+        while crnt and crnt not in chars:
             phrase += crnt
             crnt = self.next()
         return phrase
+
+    def skip_until(self, chars: List[str]) -> None:
+        """
+        Skip until we encounter one of the provided chars. Inclusive, so we also skip the first char encountered
+        :param chars:
+        """
+        crnt = self.next()
+        while crnt and crnt not in chars:
+            crnt = self.next()

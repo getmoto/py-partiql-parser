@@ -18,7 +18,7 @@ class Test_Chapter4:
 
     def test_example2a(self):
         query = "SELECT VALUE v FROM [1, 2, 3] AS v"
-        expected_result = [1, 2, 3]
+        expected_result = [[1, 2, 3]]
         assert_result(query, expected_result)
 
     @pytest.mark.xfail(reason="Not yet implemented")
@@ -145,11 +145,10 @@ class Test_Chapter6:
         result = [2, 4, 6]
         assert_result(query, result)
 
-    @pytest.mark.xfail(reason="Not yet implemented")
     def test_example13(self):
         query = """SELECT VALUE {'a':v.a, 'b':v.b}
     FROM [{'a':1, 'b':1}, {'a':2, 'b':2}] AS v"""
-        result = [{"a": 1, "b": 1}, {"a": 2, "b": 2}]
+        result = [{"a": "1", "b": "1"}, {"a": "2", "b": "2"}]
         assert_result(query, result)
 
     @pytest.mark.xfail(reason="Not yet implemented")
