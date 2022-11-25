@@ -47,6 +47,10 @@ def test_list_with_numbers_and_strings():
     JsonParser().parse(json.dumps(["x", 1324, "y"])).should.equal(["x", 1324, "y"])
 
 
+def test_list_with_variables():
+    JsonParser().parse("[v.a, v.b]").should.equal([Variable("v.a"), Variable("v.b")])
+
+
 def test_dict_with_key_containing_a_special_char():
     JsonParser().parse(json.dumps({"a:a": "b"})).should.equal({"a:a": "b"})
 

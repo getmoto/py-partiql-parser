@@ -12,9 +12,8 @@ class Parser:
 
     def parse(self, query) -> RETURN_TYPE:
         clauses = re.split("SELECT | FROM | WHERE ", query)
-        _ = clauses[
-            0
-        ]  # First clause is whatever comes in front of SELECT - which should be nothing
+        # First clause is whatever comes in front of SELECT - which should be nothing
+        _ = clauses[0]
         # FROM
         from_clause = clauses[2]
         data_source = FromParser().parse(from_clause)
@@ -23,26 +22,41 @@ class Parser:
         # SELECT
         select_clause = clauses[1]
         select_clause = SelectParser().parse(select_clause)
-        return self._find_in_dict(data_source, select_clause)
+        return self._select_data(data_source, select_clause)
 
-    def _find_in_dict(self, data_source, key) -> List[Any]:
+    def _select_data(self, data_source, select_clause) -> List[Any]:
         """
         Find a key in a dictionary
         :param data_source: Dictionary such as {"a: {"b": "asdf"}}
         :param key: Key of the data source, in dot-notation: a.b
         :return: "asdf"
         """
-        if not key:
+        if not select_clause:
             return data_source
-        if isinstance(key, Variable):
-            current_key = key.value.split(".")[0]
-            remaining_keys = ".".join(key.value.split(".")[1:])
+        if isinstance(select_clause, Variable):
+            if not select_clause.value:
+                return data_source
+            current_key = select_clause.value.split(".")[0]
+            remaining_keys = ".".join(select_clause.value.split(".")[1:])
+            if isinstance(data_source, list):
+                return [
+                    self._select_data(row[current_key], Variable(remaining_keys))
+                    for row in data_source
+                ]
+            elif isinstance(data_source, dict):
+                return self._select_data(
+                    data_source[current_key], Variable(remaining_keys)
+                )
+        if isinstance(select_clause, dict):
             return [
-                self._find_in_dict(row[current_key], remaining_keys)
+                {k: v.apply(row) for k, v in select_clause.items()}
                 for row in data_source
             ]
-        if isinstance(key, dict):
-            return [{k: v.apply(row) for k, v in key.items()} for row in data_source]
+        if isinstance(select_clause, list):
+            return [
+                [self._select_data(data_row, x) for x in select_clause]
+                for data_row in data_source
+            ]
         return []
 
 

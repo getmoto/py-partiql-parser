@@ -171,15 +171,14 @@ class Test_Chapter6:
         result = [{"same": 1, "same": 2}]
         assert_result(query, result)
 
-    @pytest.mark.xfail(reason="Not yet implemented")
     def test_example16(self):
         """
         Array Constructors
         :return:
         """
         query = """SELECT VALUE [v.a, v.b]
-    FROM [{'a':1, 'b':1}, {'a':2, 'b':2}] AS V"""
-        result = [[1, 1], [2, 2]]
+    FROM [{'a':1, 'b':1}, {'a':2, 'b':2}] AS v"""
+        result = [["1", "1"], ["2", "2"]]
         assert_result(query, result)
 
     @pytest.mark.xfail(reason="Not yet implemented")

@@ -135,8 +135,21 @@ class JsonParser:
                 result.append(current_phrase)
                 current_phrase = ""
                 section = None
-            elif section == "VALUE":
-                current_phrase += c
             elif c == "]" and not section:
                 return result
+            elif c == "]" and section == "VAR_VALUE":
+                result.append(Variable(current_phrase))
+                return result
+            elif c == "," and section == "VAR_VALUE":
+                result.append(Variable(current_phrase))
+                current_phrase = ""
+                section = None
+                tokenizer.skip_white_space()
+            elif c == "," and not section:
+                tokenizer.skip_white_space()
+            elif not section:
+                current_phrase += c
+                section = "VAR_VALUE"
+            elif section in ["VALUE", "VAR_VALUE"]:
+                current_phrase += c
         return result
