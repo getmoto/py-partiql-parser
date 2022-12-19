@@ -62,12 +62,19 @@ def test_dict_with_value_containing_a_special_char():
 def test_dict_containing_a_number():
     original = "[{'a':'legit', 'b':1}, {'a':400, 'b':2}]"
     JsonParser().parse(original).should.equal(
-        [{"a": "legit", "b": "1"}, {"a": "400", "b": "2"}]
+        [{"a": "legit", "b": 1}, {"a": 400, "b": 2}]
     )
 
 
 def test_dict_containing_a_variable():
     original = "[{'a':'legit', 'b':1}, {'a':qwer, 'b':'2'}]"
     JsonParser().parse(original).should.equal(
-        [{"a": "legit", "b": "1"}, {"a": Variable("qwer"), "b": "2"}]
+        [{"a": "legit", "b": 1}, {"a": Variable("qwer"), "b": "2"}]
+    )
+
+
+def test_unusual_quotes():
+    original = "[{’a’:1, ’b’:true}, {’a’:2, ’b’:null}, {’a’:3}]"
+    JsonParser().parse(original).should.equal(
+        [{"a": 1, "b": Variable(True)}, {"a": 2, "b": Variable(None)}, {"a": 3}]
     )

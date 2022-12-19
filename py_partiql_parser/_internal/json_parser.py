@@ -2,10 +2,16 @@ from typing import Dict, Any, List, Union
 
 from .clause_tokenizer import ClauseTokenizer
 
+ACCEPTED_QUOTES = ["'", '"', "’"]
+
 
 class Variable:
-    def __init__(self, value) -> None:
+    def __init__(self, value: Any) -> None:
         self.value = value
+        if value == "null":
+            self.value = None
+        elif isinstance(value, str) and value.lower() in ["true", "false"]:
+            self.value = bool(value)
 
     def __repr__(self) -> str:
         return f"<{self.value}>"
@@ -18,8 +24,11 @@ class Variable:
 
     def apply(self, value) -> Any:
         if isinstance(value, dict):
-            current_key = self.value.split(".")[0]
-            remaining_keys = ".".join(self.value.split(".")[1:])
+            split_value = (
+                self.value.split(".") if isinstance(self.value, str) else [self.value]
+            )
+            current_key = split_value[0]
+            remaining_keys = ".".join(split_value[1:])
             return Variable(remaining_keys).apply(value[current_key])
         else:
             return value
@@ -51,9 +60,9 @@ class JsonParser:
             elif c in ["{", ","] and not section:
                 # Start of a key
                 section = "DICT_KEY"
-                tokenizer.skip_until(["'", '"'])
+                tokenizer.skip_until(ACCEPTED_QUOTES)
                 current_phrase = ""
-            elif c in ["'", '"'] and section == "DICT_KEY":
+            elif c in ACCEPTED_QUOTES and section == "DICT_KEY":
                 # End of a key
                 dict_key = current_phrase
                 tokenizer.skip_until([":"])
@@ -65,11 +74,11 @@ class JsonParser:
                 result[dict_key] = self.parse(original, tokenizer)
                 section = None
                 current_phrase = ""
-            elif c in ["'", '"'] and section == "KEY_TO_VALUE":
+            elif c in ACCEPTED_QUOTES and section == "KEY_TO_VALUE":
                 # Start of a value
                 section = "DICT_VAL"
                 current_phrase = ""
-            elif c in ["'", '"'] and section == "DICT_VAL":
+            elif c in ACCEPTED_QUOTES and section == "DICT_VAL":
                 # End of a value
                 result[dict_key] = current_phrase
                 section = None
@@ -77,7 +86,7 @@ class JsonParser:
             elif c in ["}"] and section in ["VAR_VALUE", "INT_VALUE"]:
                 # End of a variable/number
                 result[dict_key] = (
-                    current_phrase
+                    int(current_phrase)
                     if section == "INT_VALUE"
                     else Variable(current_phrase)
                 )
@@ -87,7 +96,7 @@ class JsonParser:
                     break
             elif c in [","] and section in ["VAR_VALUE", "INT_VALUE"]:
                 result[dict_key] = (
-                    current_phrase
+                    int(current_phrase)
                     if section == "INT_VALUE"
                     else Variable(current_phrase)
                 )
@@ -129,9 +138,9 @@ class JsonParser:
                 # Skip the comma, and any whitespace
                 tokenizer.next()
                 tokenizer.skip_white_space()
-            elif c in ['"', "'"] and section is None:
+            elif c in ACCEPTED_QUOTES and section is None:
                 section = "VALUE"
-            elif c in ['"', "'"] and section == "VALUE":
+            elif c in ACCEPTED_QUOTES and section == "VALUE":
                 result.append(current_phrase)
                 current_phrase = ""
                 section = None

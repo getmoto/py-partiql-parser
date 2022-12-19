@@ -2,7 +2,7 @@ import sure  # noqa
 import pytest
 
 from py_partiql_parser import Parser
-from py_partiql_parser._internal.parser import FromParser
+from py_partiql_parser._internal.parser import FromParser, Variable
 
 MISSING = "TODO"
 
@@ -110,7 +110,7 @@ class Test_Chapter5:
             {"s": {"readings": [{"v": 0.7}, {"v": 0.8}, {"v": 0.9}]}, "r": {"v": 0.8}},
             {"s": {"readings": [{"v": 0.7}, {"v": 0.8}, {"v": 0.9}]}, "r": {"v": 0.9}},
         ]
-        assert_from_result(from_clause, expected_output)
+        FromParser(input).parse(from_clause).should.equal(expected_output)
 
     @pytest.mark.xfail(reason="Not yet implemented")
     def test_example11(self):
@@ -148,7 +148,7 @@ class Test_Chapter6:
     def test_example13(self):
         query = """SELECT VALUE {'a':v.a, 'b':v.b}
     FROM [{'a':1, 'b':1}, {'a':2, 'b':2}] AS v"""
-        result = [{"a": "1", "b": "1"}, {"a": "2", "b": "2"}]
+        result = [{"a": 1, "b": 1}, {"a": 2, "b": 2}]
         assert_result(query, result)
 
     @pytest.mark.xfail(reason="Not yet implemented")
@@ -178,7 +178,7 @@ class Test_Chapter6:
         """
         query = """SELECT VALUE [v.a, v.b]
     FROM [{'a':1, 'b':1}, {'a':2, 'b':2}] AS v"""
-        result = [["1", "1"], ["2", "2"]]
+        result = [[1, 1], [2, 2]]
         assert_result(query, result)
 
     @pytest.mark.xfail(reason="Not yet implemented")
@@ -306,7 +306,6 @@ class Test_Chapter8:
     WHERE clause
     """
 
-    @pytest.mark.xfail(reason="Not yet implemented")
     def test_example30(self):
         query = """SELECT VALUES v.a
 FROM [{’a’:1, ’b’:true}, {’a’:2, ’b’:null}, {’a’:3}] v
