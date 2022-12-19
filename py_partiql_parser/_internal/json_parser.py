@@ -28,10 +28,17 @@ class Variable:
                 self.value.split(".") if isinstance(self.value, str) else [self.value]
             )
             current_key = split_value[0]
+            if current_key not in value:
+                return MissingVariable()
             remaining_keys = ".".join(split_value[1:])
             return Variable(remaining_keys).apply(value[current_key])
         else:
             return value
+
+
+class MissingVariable(Variable):
+    def __init__(self) -> None:
+        super().__init__(value=None)
 
 
 class JsonParser:

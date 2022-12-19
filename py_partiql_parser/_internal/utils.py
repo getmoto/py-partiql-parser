@@ -1,5 +1,5 @@
-from .json_parser import Variable
-from typing import Any, Dict, Optional, Union
+from .json_parser import MissingVariable, Variable
+from typing import Any, Dict, Union
 
 
 def find_nested_data(
@@ -21,15 +21,26 @@ def find_nested_data(
         current_key = select_clause.value.split(".")[0]
         remaining_keys = ".".join(select_clause.value.split(".")[1:])
         if isinstance(data_source, list):
-            return [
-                find_nested_data(row[current_key], Variable(remaining_keys))
-                for row in data_source
-            ]
+            result = []
+            for row in data_source:
+                if current_key not in row:
+                    result.append(MissingVariable())
+                else:
+                    result.append(
+                        find_nested_data(row[current_key], Variable(remaining_keys))
+                    )
+            return result
         elif isinstance(data_source, dict):
+            if current_key not in data_source:
+                return MissingVariable()
             return find_nested_data(data_source[current_key], Variable(remaining_keys))
     if isinstance(select_clause, dict):
-        return [
+        result = [
             {k: v.apply(row) for k, v in select_clause.items()} for row in data_source
+        ]
+        return [
+            {k: v for k, v in row.items() if not isinstance(v, MissingVariable)}
+            for row in result
         ]
     if isinstance(select_clause, list):
         return [

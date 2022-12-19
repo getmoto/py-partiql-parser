@@ -1,8 +1,8 @@
 import sure  # noqa
 import pytest
 
-from py_partiql_parser import Parser
-from py_partiql_parser._internal.parser import FromParser, Variable
+from py_partiql_parser import Parser, MissingVariable
+from py_partiql_parser._internal.parser import FromParser
 
 MISSING = "TODO"
 
@@ -192,7 +192,6 @@ class Test_Chapter6:
         result = [{1, 1}, {2, 2}]
         assert_result(query, result)
 
-    @pytest.mark.xfail(reason="Not yet implemented")
     def test_example18(self):
         """
         when constructing tuples
@@ -201,11 +200,10 @@ class Test_Chapter6:
         :return:
         """
         query = """SELECT VALUE {'a':v.a, 'b':v.b}
-FROM [{'a':1, 'b':1}, {'a':2}]"""
+FROM [{'a':1, 'b':1}, {'a':2}] AS v"""
         expected_output = [{"a": 1, "b": 1}, {"a": 2}]
         assert_result(query, expected_output)
 
-    @pytest.mark.xfail(reason="Not yet implemented")
     def test_example19(self):
         """
         when constructing arrays
@@ -213,11 +211,10 @@ FROM [{'a':1, 'b':1}, {'a':2}]"""
         :return:
         """
         query = """SELECT VALUE [v.a, v.b]
-FROM [{'a':1, 'b':1}, {'a':2}]"""
-        expected_output = [[1, 1], [2, MISSING]]
+FROM [{'a':1, 'b':1}, {'a':2}] AS v"""
+        expected_output = [[1, 1], [2, MissingVariable()]]
         assert_result(query, expected_output)
 
-    @pytest.mark.xfail(reason="Not yet implemented")
     def test_example20(self):
         """
         when constructing bags
@@ -225,8 +222,8 @@ FROM [{'a':1, 'b':1}, {'a':2}]"""
         :return:
         """
         query = """SELECT VALUE v.b
-FROM [{'a':1, 'b':1}, {'a':2}]"""
-        expected_output = [1, MISSING]
+FROM [{'a':1, 'b':1}, {'a':2}] AS v"""
+        expected_output = [1, MissingVariable()]
         assert_result(query, expected_output)
 
     @pytest.mark.xfail(reason="Not yet implemented")
