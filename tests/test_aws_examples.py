@@ -16,7 +16,7 @@ Mary,(949) 555-6706,Chicago,Developer
 Kate,(949) 555-6707,Chicago,Developer"""
 
 
-input_data_json = [
+input_json_list = [
     {
         "Name": "Sam",
         "PhoneNumber": "(949) 555-6701",
@@ -61,6 +61,8 @@ input_data_json = [
     },
 ]
 
+input_json_object = {"a1": "b1", "a2": "b2"}
+
 
 @pytest.mark.xfail(reason="CSV functionality not yet implemented")
 def test_aws_sample__csv():
@@ -70,7 +72,7 @@ def test_aws_sample__csv():
 
 def test_aws_sample__json__search_by_name():
     query = "SELECT * FROM s3object s where s.\"Name\" = 'Jane'"
-    result = Parser(source_data={"s3object": input_data_json}).parse(query)
+    result = Parser(source_data={"s3object": input_json_list}).parse(query)
     result.should.equal(
         [
             {
@@ -85,7 +87,7 @@ def test_aws_sample__json__search_by_name():
 
 def test_aws_sample__json__search_by_city():
     query = "SELECT * FROM s3object s where s.\"City\" = 'Chicago'"
-    result = Parser(source_data={"s3object": input_data_json}).parse(query)
+    result = Parser(source_data={"s3object": input_json_list}).parse(query)
     result.should.have.length_of(4)
     result.should.contain(
         {
@@ -119,3 +121,9 @@ def test_aws_sample__json__search_by_city():
             "Occuption": "Developer",
         }
     )
+
+
+def test_aws_sample__object_select_all():
+    query = "SELECT * FROM s3object"
+    result = Parser(source_data={"s3object": input_json_object}).parse(query)
+    result.should.equal(input_json_object)

@@ -114,7 +114,11 @@ class FromParser:
             if isinstance(data, list) and all([isinstance(row, dict) for row in data]):
                 result.extend([{alias: row} for row in data])
             elif isinstance(data, Variable) and self.source_data:
-                result.extend(find_nested_data(self.source_data, data))
+                alias_data = find_nested_data(self.source_data, data)
+                if isinstance(alias_data, list):
+                    result.extend(alias_data)
+                else:
+                    result = alias_data
             else:
                 result.append({alias: data})
         return clauses, result
