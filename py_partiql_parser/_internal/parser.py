@@ -8,7 +8,6 @@ from .utils import find_nested_data
 
 
 class Parser:
-
     RETURN_TYPE = Union[Dict[AnyStr, Any], List]
 
     def __init__(self, source_data: Optional[Dict[str, str]] = None):

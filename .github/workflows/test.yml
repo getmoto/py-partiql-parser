@@ -26,7 +26,7 @@ jobs:
     - name: Lint
       run: |
         mypy py_partiql_parser
-        black --check py_partiql_parser .
+        black --check .
 
   test:
     name: Unit test

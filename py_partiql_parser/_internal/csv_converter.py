@@ -1,10 +1,22 @@
 import json
+from typing import List
 
 
-def csv_to_json(input: str) -> str:
+def csv_to_json(input: str, headers_included=False) -> str:
     output = ""
+    headers: List[str] = []
     for line in input.split("\n"):
-        output += json.dumps({f"_{idx+1}": key for idx, key in enumerate(line.split(","))}) + "\n"
+        values = line.split(",")
+        if len(headers) == 0:
+            if headers_included:
+                headers = values
+                continue
+            else:
+                headers = [f"_{x}" for x in range(1, len(values) + 1)]
+        output += (
+            json.dumps({f"{headers[idx]}": key for idx, key in enumerate(values)})
+            + "\n"
+        )
     if output.endswith("\n"):
         output = output.rstrip("\n")
     return output

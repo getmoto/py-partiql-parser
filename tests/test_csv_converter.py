@@ -12,8 +12,11 @@ Mary,(949) 555-6706,Chicago,Developer
 Kate,(949) 555-6707,Chicago,Developer"""
 
 
-input_with_header = """Name,PhoneNumber,City,Occupation
-""" + input_csv
+input_with_header = (
+    """Name,PhoneNumber,City,Occupation
+"""
+    + input_csv
+)
 
 
 def test_csv_to_json():
@@ -23,3 +26,15 @@ def test_csv_to_json():
 
     line0 = json.loads(lines[0])
     line0.should.have.key("_1").equals("Sam")
+
+
+def test_csv_to_json_with_headers():
+    result = csv_to_json(input_with_header, headers_included=True)
+    lines = result.split("\n")
+    lines.should.have.length_of(7)
+
+    line0 = json.loads(lines[0])
+    line0.should.have.key("Name").equals("Sam")
+
+    line2 = json.loads(lines[2])
+    line2.should.have.key("City").equals("Seattle")
