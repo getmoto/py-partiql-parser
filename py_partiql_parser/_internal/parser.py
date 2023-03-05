@@ -37,12 +37,6 @@ class Parser:
 
 class SelectParser:
     def parse(self, select_clause, data=None) -> Any:
-        if select_clause.startswith("VALUE "):
-            select_clause = select_clause[6:].strip()
-            select_clause = JsonParser().parse(select_clause)
-            return find_nested_data(data, select_clause)
-        if select_clause.startswith("VALUES "):
-            return set(find_nested_data(data, Variable(select_clause[7:])))
         return find_nested_data(data, None)
 
 

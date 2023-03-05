@@ -70,6 +70,7 @@ def test_aws_sample__csv():
     x = Parser(source_data={"s3object": input_data_csv}).parse(query)
 
 
+@pytest.mark.xfail("this shouldn't work, as it doesn't work against AWS. Input should be a string where line is a document, not a list")
 def test_aws_sample__json__search_by_name():
     query = "SELECT * FROM s3object s where s.\"Name\" = 'Jane'"
     result = Parser(source_data={"s3object": input_json_list}).parse(query)
@@ -85,6 +86,7 @@ def test_aws_sample__json__search_by_name():
     )
 
 
+@pytest.mark.xfail("this shouldn't work, as it doesn't work against AWS. Input should be a string where line is a document, not a list")
 def test_aws_sample__json__search_by_city():
     query = "SELECT * FROM s3object s where s.\"City\" = 'Chicago'"
     result = Parser(source_data={"s3object": input_json_list}).parse(query)
