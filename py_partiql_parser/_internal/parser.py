@@ -1,6 +1,7 @@
+import json
 import re
 
-from typing import Dict, Any, Union, List, AnyStr, Optional
+from typing import Dict, Any, Union, List, AnyStr, Optional, Tuple
 
 from .clause_tokenizer import ClauseTokenizer
 from .json_parser import JsonParser, Variable
@@ -10,47 +11,58 @@ from .utils import find_nested_data
 class Parser:
     RETURN_TYPE = Union[Dict[AnyStr, Any], List]
 
-    def __init__(self, source_data: Optional[Dict[str, str]] = None):
-        self.source_data = source_data or {}
+    def __init__(self, source_data: Dict[str, str]):
+        self.source_data = source_data
+        # Source data is in the format: {source: json}
+        # Where 'json' is one or more json documents separated by a newline
+        # We're assuming it is a single document for now
+        self.documents = {key: [value] for key, value in source_data.items()}
 
-    def parse(self, query: str) -> RETURN_TYPE:
+    def parse(self, query: str) -> List[str]:
         query = query.replace("\n", " ")
         clauses = re.split("SELECT | FROM | WHERE ", query, flags=re.IGNORECASE)
         # First clause is whatever comes in front of SELECT - which should be nothing
         _ = clauses[0]
         # FROM
-        from_clause = clauses[2]
-        from_clauses, partially_prepped_data = FromParser(self.source_data).parse(
-            from_clause
-        )
+        from_clauses = FromParser().parse(clauses[2])
         # WHERE
         if len(clauses) > 3:
             where_clause = clauses[3]
-            partially_prepped_data = WhereParser(partially_prepped_data).parse(
+            partially_prepped_data = WhereParser(self.source_data).parse(
                 from_clauses, where_clause
             )
         # SELECT
         select_clause = clauses[1]
-        return SelectParser().parse(select_clause, partially_prepped_data)
+        key, data = SelectParser().parse(select_clause, from_clauses, self.documents)
+        return find_nested_data(select_clause=key, data_source=data)
 
 
 class SelectParser:
-    def parse(self, select_clause, data=None) -> Any:
-        return find_nested_data(data, None)
+    def parse(
+        self,
+        select_clause: str,
+        from_clauses: Dict[str, Any],
+        data: Dict[str, List[str]],
+    ) -> Tuple[str, List[str]]:
+        aliased_data = from_clauses
+        for key, value in aliased_data.items():
+            if value in data:
+                aliased_data[key] = data[value]
+        # TODO: deal with multiple select clauses
+        if "." in select_clause:
+            key, remaining = select_clause.split(".", maxsplit=1)
+            return remaining, aliased_data[key]
+        else:
+            return select_clause, aliased_data[key]
 
 
 class FromParser:
-    def __init__(self, source_data: Optional[Dict[str, str]] = None):
-        self.source_data = source_data or {}
-
-    def parse(self, from_clause) -> Any:
+    def parse(self, from_clause) -> Dict[str, str]:
         """
         Parse a FROM-clause in a PARTIQL query
         :param from_clause: a string of format `a AS b, x AS y` where `a` and `x` can contain commas
         :return: a dictionary of format `[b:a, y:x]`
         """
-        if from_clause.lower().startswith("from "):
-            from_clause = from_clause[5:]
         clauses: Dict[str, Any] = dict()
         section = "NAME"  # NAME/AS/ALIAS
         current_phrase = ""
@@ -64,7 +76,7 @@ class FromParser:
                 current_phrase = "[" + from_clause_parser.next_until(["]"]) + "]"
                 continue
             if c == " ":
-                if section == "AS" and current_phrase == "AS":
+                if section == "AS" and current_phrase.upper() == "AS":
                     current_phrase = ""
                     section = "ALIAS"
                 elif section == "NAME":
@@ -98,23 +110,8 @@ class FromParser:
             for short, long in aliases:
                 if value.startswith(short):
                     clauses[key] = value.replace(short, long)
-        #
-        # Substitute the FROM-clause with the appropriate data
-        # TODO: when we have multiple clauses, we should create a cartesian product
-        result = []
-        for alias, data in clauses.items():
-            data = JsonParser().parse(data)
-            if isinstance(data, list) and all([isinstance(row, dict) for row in data]):
-                result.extend([{alias: row} for row in data])
-            elif isinstance(data, Variable) and self.source_data:
-                alias_data = find_nested_data(self.source_data, data)
-                if isinstance(alias_data, list):
-                    result.extend(alias_data)
-                else:
-                    result = alias_data
-            else:
-                result.append({alias: data})
-        return clauses, result
+        # {alias: full_name_of_table_or_file}
+        return clauses
 
 
 class WhereParser:

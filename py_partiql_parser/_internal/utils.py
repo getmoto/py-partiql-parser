@@ -1,42 +1,58 @@
+import json
 from .json_parser import MissingVariable, Variable
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Union
 
 
-def find_nested_data(
-    data_source: Dict[str, Any], select_clause: Union[None, str, Variable]
-) -> Any:
+def find_nested_data(select_clause: str, data_source: List[str]) -> List[str]:
     """
-    Find a key in a dictionary
-    :param data_source: Dictionary such as {"a: {"b": "asdf"}}
+    Iterate over a list of JSON documents, and return only the keys specified
     :param select_clause: Key of the data source, in dot-notation: a.b
-    :return: "asdf"
+    :param data_source: List of JSON documents in string form
+    :return: A list of JSON keys in string formation
     """
-    if not select_clause:
-        return data_source
+
+    results: List[str] = []
+
+    for row in data_source:
+        # Run the select-clause over each row
+        result = _find_nested_data(
+            select_clause=select_clause, json_doc=json.loads(row)
+        )
+        results.append(json.dumps(result))
+    return results
+
+
+def _find_nested_data(select_clause: Union[None, str, Variable], json_doc: Any):
     if isinstance(select_clause, str):
+        if select_clause == "*":
+            return json_doc
         select_clause = Variable(select_clause)
     if isinstance(select_clause, Variable):
         if not select_clause.value:
-            return data_source
+            return json_doc
         current_key = select_clause.value.split(".")[0]
         remaining_keys = ".".join(select_clause.value.split(".")[1:])
-        if isinstance(data_source, list):
+        if isinstance(json_doc, list):
             result = []
-            for row in data_source:
+            for row in json_doc:
                 if current_key not in row:
                     result.append(MissingVariable())
                 else:
                     result.append(
-                        find_nested_data(row[current_key], Variable(remaining_keys))
+                        _find_nested_data(row[current_key], Variable(remaining_keys))
                     )
             return result
-        elif isinstance(data_source, dict):
-            if current_key not in data_source:
+        elif isinstance(json_doc, dict):
+            if current_key not in json_doc:
                 return MissingVariable()
-            return find_nested_data(data_source[current_key], Variable(remaining_keys))
+            if remaining_keys:
+                return _find_nested_data(
+                    json_doc[current_key], Variable(remaining_keys)
+                )
+            return {current_key: json_doc[current_key]}
     if isinstance(select_clause, dict):
         result = [
-            {k: v.apply(row) for k, v in select_clause.items()} for row in data_source
+            {k: v.apply(row) for k, v in select_clause.items()} for row in json_doc
         ]
         return [
             {k: v for k, v in row.items() if not isinstance(v, MissingVariable)}
@@ -44,7 +60,7 @@ def find_nested_data(
         ]
     if isinstance(select_clause, list):
         return [
-            [find_nested_data(data_row, x) for x in select_clause]
-            for data_row in data_source
+            [_find_nested_data(data_row, x) for x in select_clause]
+            for data_row in json_doc
         ]
     return []

@@ -1,3 +1,4 @@
+import json
 import pytest
 import sure  # noqa
 from py_partiql_parser import Parser
@@ -60,6 +61,7 @@ input_json_list = [
         "Occuption": "Developer",
     },
 ]
+json_as_lines = "\n".join([json.dumps(x) for x in input_json_list])
 
 input_json_object = {"a1": "b1", "a2": "b2"}
 
@@ -93,7 +95,7 @@ def test_aws_sample__json__search_by_name():
 )
 def test_aws_sample__json__search_by_city():
     query = "SELECT * FROM s3object s where s.\"City\" = 'Chicago'"
-    result = Parser(source_data={"s3object": input_json_list}).parse(query)
+    result = Parser(source_data={"s3object": json_as_lines}).parse(query)
     result.should.have.length_of(4)
     result.should.contain(
         {
@@ -131,5 +133,15 @@ def test_aws_sample__json__search_by_city():
 
 def test_aws_sample__object_select_all():
     query = "SELECT * FROM s3object"
-    result = Parser(source_data={"s3object": input_json_object}).parse(query)
-    result.should.equal(input_json_object)
+    result = Parser(source_data={"s3object": json.dumps(input_json_object)}).parse(
+        query
+    )
+    result.should.equal([json.dumps(input_json_object)])
+
+
+def test_aws_sample__object_select_attr():
+    query = "SELECT s.a1 FROM s3object AS s"
+    result = Parser(source_data={"s3object": json.dumps(input_json_object)}).parse(
+        query
+    )
+    result.should.equal([json.dumps({"a1": "b1"})])
