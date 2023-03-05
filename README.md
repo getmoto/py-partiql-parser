@@ -22,7 +22,7 @@ https://github.com/getmoto/py-partiql-parser/blob/main/tests/test_aws_examples.p
 
 ## Outstanding
  - Support for functions such as `count(*)`
- - There is no CSV support at the moment. We'll have to decide how/if to implement that. We could force users to convert their data into JSON first, so we don't have to worry about that..
+ - Support for CSV conversion. A start has been made in `_internal/csv_converter.py`
  - .. and I'm sure many other things.
 
 ## Notes
