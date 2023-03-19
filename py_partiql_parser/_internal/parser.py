@@ -14,7 +14,7 @@ class Parser:
         self.source_data = source_data
         # Source data is in the format: {source: json}
         # Where 'json' is one or more json documents separated by a newline
-        self.documents = {key: [value] for key, value in source_data.items()}
+        self.documents = {key: value for key, value in source_data.items()}
 
     def parse(self, query: str) -> List[str]:
         query = query.replace("\n", " ")
@@ -29,13 +29,11 @@ class Parser:
             self.documents = WhereParser(self.source_data).parse(
                 from_clauses, where_clause
             )
-            print("---A")
-            print(self.documents)
         else:
             for key, value in self.documents.items():
-                self.documents[key] = [JsonParser().parse(val) for val in value]
-            print("---B")
-            print(self.documents)
+                self.documents[key] = JsonParser().parse(value)
+                if isinstance(self.documents[key], dict):
+                    self.documents[key] = [self.documents[key]]
         # SELECT
         select_clause = clauses[1]
         key, data = SelectParser().parse(select_clause, from_clauses, self.documents)
