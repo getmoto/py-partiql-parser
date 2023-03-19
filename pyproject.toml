@@ -1,7 +1,7 @@
 [project]
 name = "py-partiql-parser"
 version = "0.1.0"
-description = ""
+description = "Pure Python PartiQL Parser"
 authors = [{name="Bert Blommers", email="info@bertblommers.nl"}]
 
 dependencies = []
