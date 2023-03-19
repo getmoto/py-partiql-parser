@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Union
 
 def find_nested_data(
     select_clause: str, data_source: List[Dict[str, Any]]
-) -> List[str]:
+) -> List[Dict[str, Any]]:
     """
     Iterate over a list of JSON objects, and return only the keys specified
     :param select_clause: Key of the data source, in dot-notation: a.b
@@ -12,7 +12,7 @@ def find_nested_data(
     :return: A list of JSON keys as dictionary
     """
 
-    results: List[str] = []
+    results: List[Dict[str, Any]] = []
 
     for row in data_source:
         # Run the select-clause over each row
@@ -21,7 +21,7 @@ def find_nested_data(
     return results
 
 
-def _find_nested_data(select_clause: Union[None, str, Variable], json_doc: Any):
+def _find_nested_data(select_clause: Union[None, str, Variable], json_doc: Any) -> Any:
     if isinstance(select_clause, str):
         if select_clause == "*":
             return json_doc

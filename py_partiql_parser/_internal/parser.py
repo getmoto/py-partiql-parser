@@ -16,7 +16,7 @@ class Parser:
         # Where 'json' is one or more json documents separated by a newline
         self.documents = {key: value for key, value in source_data.items()}
 
-    def parse(self, query: str) -> List[str]:
+    def parse(self, query: str) -> List[Dict[str, Any]]:
         query = query.replace("\n", " ")
         clauses = re.split("SELECT | FROM | WHERE ", query, flags=re.IGNORECASE)
         # First clause is whatever comes in front of SELECT - which should be nothing
@@ -33,11 +33,10 @@ class Parser:
             for key, value in self.documents.items():
                 self.documents[key] = JsonParser().parse(value)
                 if isinstance(self.documents[key], dict):
-                    self.documents[key] = [self.documents[key]]
+                    self.documents[key] = [self.documents[key]]  # type: ignore
         # SELECT
         select_clause = clauses[1]
-        key, data = SelectParser().parse(select_clause, from_clauses, self.documents)
-        return find_nested_data(select_clause=key, data_source=data)
+        return SelectParser().parse(select_clause, from_clauses, self.documents)
 
 
 class SelectParser:
@@ -45,18 +44,26 @@ class SelectParser:
         self,
         select_clause: str,
         from_clauses: Dict[str, Any],
-        data: Dict[str, List[str]],
-    ) -> Tuple[str, List[Dict[str, Any]]]:
+        data: Dict[str, str],
+    ) -> List[Dict[str, Any]]:
         aliased_data = from_clauses
         for key, value in aliased_data.items():
             if value in data:
                 aliased_data[key] = data[value]
         # TODO: deal with multiple select clauses
+        print(select_clause)
+        if select_clause == "count(*)":
+            print(aliased_data)
+            return [{"_1": len(aliased_data["s3object"])}]
         if "." in select_clause:
             key, remaining = select_clause.split(".", maxsplit=1)
-            return remaining, aliased_data[key]
+            return find_nested_data(
+                select_clause=remaining, data_source=aliased_data[key]
+            )
         else:
-            return select_clause, aliased_data[key]
+            return find_nested_data(
+                select_clause=select_clause, data_source=aliased_data[key]
+            )
 
 
 class FromParser:
