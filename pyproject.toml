@@ -2,6 +2,9 @@
 name = "py-partiql-parser"
 version = "0.1.0"
 description = "Pure Python PartiQL Parser"
+readme = "README.md"
+keywords = ["pypartiql", "parser"]
+license = {text = "MIT"}
 authors = [{name="Bert Blommers", email="info@bertblommers.nl"}]
 
 dependencies = []
