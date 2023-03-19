@@ -6,6 +6,15 @@ class ClauseTokenizer:
         self.token_list = from_clause
         self.token_pos = 0
 
+    def current(self):
+        """
+        Returns the current char - or None
+        """
+        try:
+            return self.token_list[self.token_pos]
+        except IndexError:
+            return None
+
     def next(self) -> Optional[AnyStr]:
         """
         Returns the next token - or None
@@ -18,12 +27,18 @@ class ClauseTokenizer:
         except IndexError:
             return None
 
+    def peek(self):
+        try:
+            return self.token_list[self.token_pos + 1]
+        except IndexError:
+            return None
+
     def revert(self):
         self.token_pos -= 1
 
     def skip_white_space(self) -> None:
         try:
-            while self.token_list[self.token_pos] == " ":
+            while self.token_list[self.token_pos] in [" ", "\n"]:
                 self.token_pos += 1
         except IndexError:
             pass

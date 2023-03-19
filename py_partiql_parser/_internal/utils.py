@@ -1,24 +1,23 @@
-import json
 from .json_parser import MissingVariable, Variable
 from typing import Any, Dict, List, Union
 
 
-def find_nested_data(select_clause: str, data_source: List[str]) -> List[str]:
+def find_nested_data(
+    select_clause: str, data_source: List[Dict[str, Any]]
+) -> List[str]:
     """
-    Iterate over a list of JSON documents, and return only the keys specified
+    Iterate over a list of JSON objects, and return only the keys specified
     :param select_clause: Key of the data source, in dot-notation: a.b
-    :param data_source: List of JSON documents in string form
-    :return: A list of JSON keys in string formation
+    :param data_source: List of JSON documents as dictionary
+    :return: A list of JSON keys as dictionary
     """
 
     results: List[str] = []
 
     for row in data_source:
         # Run the select-clause over each row
-        result = _find_nested_data(
-            select_clause=select_clause, json_doc=json.loads(row)
-        )
-        results.append(json.dumps(result))
+        result = _find_nested_data(select_clause=select_clause, json_doc=row)
+        results.append(result)
     return results
 
 

@@ -90,9 +90,6 @@ def test_aws_sample__json__search_by_name():
     )
 
 
-@pytest.mark.xfail(
-    reason="this shouldn't work, as it doesn't work against AWS. Input should be a string where line is a document, not a list"
-)
 def test_aws_sample__json__search_by_city():
     query = "SELECT * FROM s3object s where s.\"City\" = 'Chicago'"
     result = Parser(source_data={"s3object": json_as_lines}).parse(query)
@@ -136,7 +133,7 @@ def test_aws_sample__object_select_all():
     result = Parser(source_data={"s3object": json.dumps(input_json_object)}).parse(
         query
     )
-    result.should.equal([json.dumps(input_json_object)])
+    result.should.equal([input_json_object])
 
 
 def test_aws_sample__object_select_attr():
@@ -144,4 +141,4 @@ def test_aws_sample__object_select_attr():
     result = Parser(source_data={"s3object": json.dumps(input_json_object)}).parse(
         query
     )
-    result.should.equal([json.dumps({"a1": "b1"})])
+    result.should.equal([{"a1": "b1"}])

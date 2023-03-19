@@ -1,4 +1,3 @@
-import json
 import re
 
 from typing import Dict, Any, Union, List, AnyStr, Optional, Tuple
@@ -15,7 +14,6 @@ class Parser:
         self.source_data = source_data
         # Source data is in the format: {source: json}
         # Where 'json' is one or more json documents separated by a newline
-        # We're assuming it is a single document for now
         self.documents = {key: [value] for key, value in source_data.items()}
 
     def parse(self, query: str) -> List[str]:
@@ -28,9 +26,16 @@ class Parser:
         # WHERE
         if len(clauses) > 3:
             where_clause = clauses[3]
-            partially_prepped_data = WhereParser(self.source_data).parse(
+            self.documents = WhereParser(self.source_data).parse(
                 from_clauses, where_clause
             )
+            print("---A")
+            print(self.documents)
+        else:
+            for key, value in self.documents.items():
+                self.documents[key] = [JsonParser().parse(val) for val in value]
+            print("---B")
+            print(self.documents)
         # SELECT
         select_clause = clauses[1]
         key, data = SelectParser().parse(select_clause, from_clauses, self.documents)
@@ -43,7 +48,7 @@ class SelectParser:
         select_clause: str,
         from_clauses: Dict[str, Any],
         data: Dict[str, List[str]],
-    ) -> Tuple[str, List[str]]:
+    ) -> Tuple[str, List[Dict[str, Any]]]:
         aliased_data = from_clauses
         for key, value in aliased_data.items():
             if value in data:
@@ -118,11 +123,29 @@ class WhereParser:
     def __init__(self, partially_prepped_data: Any = None):
         self.partially_prepped_data = partially_prepped_data or {}
 
-    def parse(self, from_clauses, where_clause) -> Any:
+    def parse(self, from_clauses: Dict[str, str], where_clause: str) -> Any:
+        return_all = where_clause == "TRUE"
+        if return_all:
+            alias, key, value = ("", "", "")
+        else:
+            alias, key, value = self._parse_where_clause(where_clause)
+        #
+        # Let's assume the following:
+        #  - We only have one data source, denoted by the alias
+        #  - Our partially prepped data is from that data source
+        data_as_string = self.partially_prepped_data.get(from_clauses.get(alias, alias))
+        data_as_json = JsonParser().parse(data_as_string)
+        return {
+            from_clauses.get(alias, alias): [
+                row for row in data_as_json if return_all or row_filter(row, key, value)
+            ]
+        }
+
+    def _parse_where_clause(self, where_clause: str) -> Tuple[str, str, str]:
         where_clause_parser = ClauseTokenizer(where_clause)
-        alias: Optional[str] = None
-        key: Optional[str] = None
-        value: Optional[str] = None
+        alias = ""
+        key = ""
+        value = ""
         section: Optional[str] = "ALIAS"
         current_phrase = ""
         while True:
@@ -159,22 +182,10 @@ class WhereParser:
                 section = "KEY"
             if section in ["ALIAS", "KEY", "VALUE"]:
                 current_phrase += c
-        #
-        # Let's assume the following:
-        #  - We only have one data source, denoted by the alias
-        #  - Our partially prepped data is from that data source
-        return [
-            row
-            for row in self.partially_prepped_data
-            if row_filter(row, alias, key, value)
-        ]
+        return alias, key, value
 
 
-def row_filter(
-    row: Dict[str, Any], alias: Optional[str], key: Optional[str], value: Optional[str]
-):
-    if alias in row:
-        row = row[alias]
+def row_filter(row: Dict[str, Any], key: str, value: Optional[str]) -> bool:
     if value is None:
         return key in row and not_none(row[key])
     else:

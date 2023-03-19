@@ -13,6 +13,10 @@ def test_dict():
     JsonParser().parse('{"a": "b"}').should.equal({"a": "b"})
 
 
+def test_dict_with_spaces_in_keys_and_values():
+    JsonParser().parse(json.dumps({"a sth": "b sth"})).should.equal({"a sth": "b sth"})
+
+
 def test_dict_with_multiple_entries():
     JsonParser().parse(json.dumps({"a": "b", "c": "d"})).should.equal(
         {"a": "b", "c": "d"}
@@ -20,9 +24,8 @@ def test_dict_with_multiple_entries():
 
 
 def test_dict_with_nested_entries():
-    JsonParser().parse(
-        json.dumps({"a": {"b1": {"b1.1": "b1.2"}}, "c": "d"})
-    ).should.equal({"a": {"b1": {"b1.1": "b1.2"}}, "c": "d"})
+    original = {"a": {"b1": {"b1.1": "b1.2"}}, "c": "d"}
+    JsonParser().parse(json.dumps(original)).should.equal(original)
 
 
 def test_dict_with_list():
@@ -77,4 +80,21 @@ def test_unusual_quotes():
     original = "[{’a’:1, ’b’:true}, {’a’:2, ’b’:null}, {’a’:3}]"
     JsonParser().parse(original).should.equal(
         [{"a": 1, "b": Variable(True)}, {"a": 2, "b": Variable(None)}, {"a": 3}]
+    )
+
+
+def test_parse_multiple_objects():
+    """
+    An input of multiple objects, separated by a new-line, should result in a list of objects
+    """
+    multi_object_string = """{"a1": "v1", "a1": "v2"}
+    {"a2": "w1",
+     "a2": "w2"
+    }
+{"a3": "z"
+}
+    
+    """
+    JsonParser().parse(multi_object_string).should.equal(
+        [{"a1": "v1", "a1": "v2"}, {"a2": "w1", "a2": "w2"}, {"a3": "z"}]
     )
