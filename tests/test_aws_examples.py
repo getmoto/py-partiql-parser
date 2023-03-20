@@ -44,8 +44,14 @@ def test_aws_sample__json__search_by_name():
     )
 
 
-def test_aws_sample__json__search_by_city():
-    query = "SELECT * FROM s3object s where s.\"City\" = 'Chicago'"
+@pytest.mark.parametrize(
+    "query",
+    [
+        "SELECT * FROM s3object s where s.City = 'Chicago'",
+        "SELECT * FROM s3object s where s.\"City\" = 'Chicago'",
+    ],
+)
+def test_aws_sample__json__search_by_city(query):
     result = Parser(source_data={"s3object": json_as_lines}).parse(query)
     result.should.have.length_of(4)
     result.should.contain(
@@ -78,6 +84,36 @@ def test_aws_sample__json__search_by_city():
             "PhoneNumber": "(949) 555-6707",
             "City": "Chicago",
             "Occuption": "Developer",
+        }
+    )
+
+
+def test_aws_sample__json_select_multiple_attrs__search_by_city():
+    query = "SELECT s.name, s.city FROM s3object s where s.\"City\" = 'Chicago'"
+    result = Parser(source_data={"s3object": json_as_lines}).parse(query)
+    result.should.have.length_of(4)
+    result.should.contain(
+        {
+            "Name": "Jane",
+            "City": "Chicago",
+        }
+    )
+    result.should.contain(
+        {
+            "Name": "Sean",
+            "City": "Chicago",
+        }
+    )
+    result.should.contain(
+        {
+            "Name": "Mary",
+            "City": "Chicago",
+        }
+    )
+    result.should.contain(
+        {
+            "Name": "Kate",
+            "City": "Chicago",
         }
     )
 

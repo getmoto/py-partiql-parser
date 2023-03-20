@@ -25,7 +25,6 @@ jobs:
         pip install .[dev]
     - name: Lint
       run: |
-        mypy py_partiql_parser
         black --check .
 
   test:

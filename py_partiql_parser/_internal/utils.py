@@ -1,5 +1,10 @@
+from .case_insensitive_dict import CaseInsensitiveDict
 from .json_parser import MissingVariable, Variable
 from typing import Any, Dict, List, Union
+
+
+def is_dict(dct):
+    return isinstance(dct, dict) or isinstance(dct, CaseInsensitiveDict)
 
 
 def find_nested_data(
@@ -16,12 +21,14 @@ def find_nested_data(
 
     for row in data_source:
         # Run the select-clause over each row
-        result = _find_nested_data(select_clause=select_clause, json_doc=row)
+        result = find_nested_data_in_object(select_clause=select_clause, json_doc=row)
         results.append(result)
     return results
 
 
-def _find_nested_data(select_clause: Union[None, str, Variable], json_doc: Any) -> Any:
+def find_nested_data_in_object(
+    select_clause: Union[None, str, Variable], json_doc: Any
+) -> Any:
     if isinstance(select_clause, str):
         if select_clause == "*":
             return json_doc
@@ -38,18 +45,20 @@ def _find_nested_data(select_clause: Union[None, str, Variable], json_doc: Any) 
                     result.append(MissingVariable())
                 else:
                     result.append(
-                        _find_nested_data(row[current_key], Variable(remaining_keys))
+                        find_nested_data_in_object(
+                            row[current_key], Variable(remaining_keys)
+                        )
                     )
             return result
-        elif isinstance(json_doc, dict):
+        elif isinstance(json_doc, CaseInsensitiveDict):
             if current_key not in json_doc:
                 return MissingVariable()
             if remaining_keys:
-                return _find_nested_data(
+                return find_nested_data_in_object(
                     json_doc[current_key], Variable(remaining_keys)
                 )
-            return {current_key: json_doc[current_key]}
-    if isinstance(select_clause, dict):
+            return json_doc.get_original(current_key)
+    if isinstance(select_clause, CaseInsensitiveDict):
         result = [
             {k: v.apply(row) for k, v in select_clause.items()} for row in json_doc
         ]
@@ -59,7 +68,15 @@ def _find_nested_data(select_clause: Union[None, str, Variable], json_doc: Any) 
         ]
     if isinstance(select_clause, list):
         return [
-            [_find_nested_data(data_row, x) for x in select_clause]
+            [find_nested_data_in_object(data_row, x) for x in select_clause]
             for data_row in json_doc
         ]
     return []
+
+
+def find_value_in_document(keys: List[str], json_doc):
+    if not is_dict(json_doc):
+        return None
+    if len(keys) == 1:
+        return json_doc.get(keys[0])
+    return find_value_in_document(keys[1:], json_doc.get(keys[0], {}))

@@ -1,10 +1,11 @@
 import re
 
-from typing import Dict, Any, Union, List, AnyStr, Optional, Tuple
+from typing import Dict, Any, Union, List, AnyStr
 
-from .clause_tokenizer import ClauseTokenizer
-from .json_parser import JsonParser, Variable
-from .utils import find_nested_data
+from .from_parser import FromParser
+from .json_parser import JsonParser
+from .select_parser import SelectParser
+from .where_parser import WhereParser
 
 
 class Parser:
@@ -34,172 +35,7 @@ class Parser:
                 self.documents[key] = JsonParser().parse(value)
                 if isinstance(self.documents[key], dict):
                     self.documents[key] = [self.documents[key]]  # type: ignore
+
         # SELECT
         select_clause = clauses[1]
         return SelectParser().parse(select_clause, from_clauses, self.documents)
-
-
-class SelectParser:
-    def parse(
-        self,
-        select_clause: str,
-        from_clauses: Dict[str, Any],
-        data: Dict[str, str],
-    ) -> List[Dict[str, Any]]:
-        aliased_data = from_clauses
-        for key, value in aliased_data.items():
-            if value in data:
-                aliased_data[key] = data[value]
-        # TODO: deal with multiple select clauses
-        print(select_clause)
-        if select_clause == "count(*)":
-            print(aliased_data)
-            return [{"_1": len(aliased_data["s3object"])}]
-        if "." in select_clause:
-            key, remaining = select_clause.split(".", maxsplit=1)
-            return find_nested_data(
-                select_clause=remaining, data_source=aliased_data[key]
-            )
-        else:
-            return find_nested_data(
-                select_clause=select_clause, data_source=aliased_data[key]
-            )
-
-
-class FromParser:
-    def parse(self, from_clause) -> Dict[str, str]:
-        """
-        Parse a FROM-clause in a PARTIQL query
-        :param from_clause: a string of format `a AS b, x AS y` where `a` and `x` can contain commas
-        :return: a dictionary of format `[b:a, y:x]`
-        """
-        clauses: Dict[str, Any] = dict()
-        section = "NAME"  # NAME/AS/ALIAS
-        current_phrase = ""
-        name = alias = None
-        from_clause_parser = ClauseTokenizer(from_clause)
-        while True:
-            c = from_clause_parser.next()
-            if c is None:
-                break
-            if c == "[":
-                current_phrase = "[" + from_clause_parser.next_until(["]"]) + "]"
-                continue
-            if c == " ":
-                if section == "AS" and current_phrase.upper() == "AS":
-                    current_phrase = ""
-                    section = "ALIAS"
-                elif section == "NAME":
-                    name = current_phrase
-                    current_phrase = ""
-                    section = "AS"
-                elif section == "ALIAS":
-                    alias = current_phrase
-                    current_phrase = ""
-                    section = "NAME"
-                continue
-            if c == ",":
-                if section == "NAME":
-                    clauses[current_phrase] = current_phrase
-                elif section == "ALIAS":
-                    clauses[current_phrase] = name
-                    section = "NAME"
-                current_phrase = ""
-                from_clause_parser.skip_white_space()
-                continue
-            current_phrase += c
-        if section == "NAME":
-            clauses[current_phrase] = current_phrase
-        else:
-            clauses[current_phrase] = name
-        #
-        # One FROM clause may point to the alias of another
-        # {'s': 'sensors', 'r': 's.readings'} --> {'s': 'sensors', 'r': 'sensors.readings'}
-        aliases = [(f"{key}.", f"{value}.") for key, value in clauses.items()]
-        for key, value in clauses.items():
-            for short, long in aliases:
-                if value.startswith(short):
-                    clauses[key] = value.replace(short, long)
-        # {alias: full_name_of_table_or_file}
-        return clauses
-
-
-class WhereParser:
-    def __init__(self, partially_prepped_data: Any = None):
-        self.partially_prepped_data = partially_prepped_data or {}
-
-    def parse(self, from_clauses: Dict[str, str], where_clause: str) -> Any:
-        return_all = where_clause == "TRUE"
-        if return_all:
-            alias, key, value = ("", "", "")
-        else:
-            alias, key, value = self._parse_where_clause(where_clause)
-        #
-        # Let's assume the following:
-        #  - We only have one data source, denoted by the alias
-        #  - Our partially prepped data is from that data source
-        data_as_string = self.partially_prepped_data.get(from_clauses.get(alias, alias))
-        data_as_json = JsonParser().parse(data_as_string)
-        return {
-            from_clauses.get(alias, alias): [
-                row for row in data_as_json if return_all or row_filter(row, key, value)
-            ]
-        }
-
-    def _parse_where_clause(self, where_clause: str) -> Tuple[str, str, str]:
-        where_clause_parser = ClauseTokenizer(where_clause)
-        alias = ""
-        key = ""
-        value = ""
-        section: Optional[str] = "ALIAS"
-        current_phrase = ""
-        while True:
-            c = where_clause_parser.next()
-            if c is None:
-                if section == "KEY":
-                    key = current_phrase
-                break
-            if c == ".":
-                if section == "ALIAS":
-                    alias = current_phrase
-                    current_phrase = ""
-                    section = "START_KEY"
-                    continue
-            if c in ['"', "'"]:
-                if section == "START_KEY":
-                    section = "KEY"
-                    continue
-                if section == "KEY":
-                    key = current_phrase
-                    current_phrase = ""
-                    where_clause_parser.skip_until(["="])
-                    where_clause_parser.skip_white_space()
-                    section = "START_VALUE"
-                    continue
-                if section == "START_VALUE":
-                    section = "VALUE"
-                    continue
-                if section == "VALUE":
-                    section = None
-                    value = current_phrase
-                    current_phrase = ""
-            if current_phrase == "" and section == "START_KEY":
-                section = "KEY"
-            if section in ["ALIAS", "KEY", "VALUE"]:
-                current_phrase += c
-        return alias, key, value
-
-
-def row_filter(row: Dict[str, Any], key: str, value: Optional[str]) -> bool:
-    if value is None:
-        return key in row and not_none(row[key])
-    else:
-        return key in row and row[key] == value
-
-
-def not_none(x: Optional[Variable]) -> bool:
-    if x is None:
-        return False
-    if isinstance(x, Variable):
-        return x.value is not None
-    return True

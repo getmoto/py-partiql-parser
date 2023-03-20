@@ -1,7 +1,7 @@
-import itertools
 from typing import Dict, Any, List, Union
 
 from .clause_tokenizer import ClauseTokenizer
+from .case_insensitive_dict import CaseInsensitiveDict
 
 ACCEPTED_QUOTES = ["'", '"', "’"]
 NEW_LINE = "\n"
@@ -50,7 +50,7 @@ class JsonParser:
             return original if original.isnumeric() else Variable(original)
         section = None  # DICT_KEY | KEY_TO_VALUE | DICT_VAL | OBJECT_END
         current_phrase = ""
-        result: Dict[Any, Any] = dict()
+        result: Dict[Any, Any] = CaseInsensitiveDict()
         tokenizer = tokenizer or ClauseTokenizer(original)
         while True:
             c = tokenizer.next()
