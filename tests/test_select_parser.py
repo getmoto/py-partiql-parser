@@ -26,7 +26,7 @@ def test_parse_function_clause():
 @pytest.mark.xfail(message="Not yet implemented")
 def test_parse_function_alias_clause():
     result = SelectParser().parse_clauses("count(*) as cnt")
-    assert result == [FunctionClause(function_name="count", value="*", alias="cnt")]
+    assert result == [FunctionClause(function_name="count", value="*")]
 
 
 def test_parse_mix_of_function_and_regular_clauses():

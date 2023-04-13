@@ -12,10 +12,11 @@ from .utils import is_dict
 class Parser:
     RETURN_TYPE = Union[Dict[AnyStr, Any], List]
 
-    def __init__(self, source_data: Dict[str, str]):
+    def __init__(self, source_data: Dict[str, str], query_has_table_prefix=True):
         # Source data is in the format: {source: json}
         # Where 'json' is one or more json documents separated by a newline
         self.documents = source_data
+        self.query_has_table_prefix = query_has_table_prefix
 
     def parse(self, query: str) -> List[Dict[str, Any]]:
         query = query.replace("\n", " ")
@@ -32,7 +33,9 @@ class Parser:
         # WHERE
         if len(clauses) > 3:
             where_clause = clauses[3]
-            source_data = WhereParser(source_data).parse(where_clause)
+            source_data = WhereParser(source_data, self.query_has_table_prefix).parse(
+                where_clause
+            )
 
         # SELECT
         select_clause = clauses[1]

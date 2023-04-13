@@ -6,20 +6,24 @@ from .utils import find_value_in_document
 
 
 class WhereParser:
-    def __init__(self, partially_prepped_data: Any = None):
-        self.partially_prepped_data = partially_prepped_data
+    def __init__(self, source_data: Any, query_has_table_prefix: bool):
+        self.source_data = source_data
+        self.query_has_table_prefix = query_has_table_prefix
 
     def parse(self, where_clause: str) -> Any:
         filter_keys, filter_value = self.parse_where_clause(where_clause)
 
-        return self.filter_rows(filter_keys, filter_value, self.partially_prepped_data)
+        return self.filter_rows(filter_keys, filter_value)
 
-    def filter_rows(self, filter_keys, filter_value, all_rows):
+    def filter_rows(self, filter_keys, filter_value):
         def _filter(row):
-            actual_value = find_value_in_document(filter_keys[1:], row)
-            return actual_value == filter_value
+            if self.query_has_table_prefix:
+                actual_value = find_value_in_document(filter_keys[1:], row)
+                return actual_value == filter_value
+            else:
+                return find_value_in_document(filter_keys, row) == filter_value
 
-        return [row for row in all_rows if _filter(row)]
+        return [row for row in self.source_data if _filter(row)]
 
     def parse_where_clause(self, where_clause: str) -> Tuple[List[str], str]:
         where_clause_parser = ClauseTokenizer(where_clause)
