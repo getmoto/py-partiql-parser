@@ -7,34 +7,17 @@ from .utils import find_value_in_document
 
 class WhereParser:
     def __init__(self, partially_prepped_data: Any = None):
-        print(f"WhereParser({partially_prepped_data})")
-        self.partially_prepped_data = partially_prepped_data or {}
-        for key, value in self.partially_prepped_data.items():
-            self.partially_prepped_data[key] = JsonParser().parse(value)
-        print(self.partially_prepped_data)
+        self.partially_prepped_data = partially_prepped_data
 
-    def parse(self, aliases: Dict[str, str], where_clause: str) -> Any:
-        return_all = where_clause == "TRUE"
-        if return_all:
-            alias, key, value = ("", "", "")
-        else:
-            filter_keys, filter_value = self.parse_where_clause(where_clause)
+    def parse(self, where_clause: str) -> Any:
+        filter_keys, filter_value = self.parse_where_clause(where_clause)
 
-        for data_key in self.partially_prepped_data:
-            all_rows = self.partially_prepped_data[data_key]
-            filtered_rows = self.filter_rows(
-                aliases, filter_keys, filter_value, data_key, all_rows
-            )
-            self.partially_prepped_data[data_key] = filtered_rows
+        return self.filter_rows(filter_keys, filter_value, self.partially_prepped_data)
 
-        return self.partially_prepped_data
-
-    def filter_rows(self, aliases, filter_keys, filter_value, data_key, all_rows):
+    def filter_rows(self, filter_keys, filter_value, all_rows):
         def _filter(row):
-            if aliases.get(filter_keys[0], filter_keys[0]) == data_key:
-                actual_value = find_value_in_document(filter_keys[1:], row)
-                return actual_value == filter_value
-            return False
+            actual_value = find_value_in_document(filter_keys[1:], row)
+            return actual_value == filter_value
 
         return [row for row in all_rows if _filter(row)]
 

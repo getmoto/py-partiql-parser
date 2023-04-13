@@ -11,6 +11,7 @@ class SelectClause:
 
     def select(self, aliases: Dict[str, str], document: Dict[str, Any]):
         if self.value == "*":
+            # return document[alias]
             return document["s3object"]
         if "." in self.value:
             key, remaining = self.value.split(".", maxsplit=1)
@@ -51,14 +52,9 @@ class SelectParser:
         self,
         select_clause: str,
         aliases: Dict[str, Any],
-        data: Dict[str, List[Dict[str, Any]]],
+        documents: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
         clauses = self.parse_clauses(select_clause)
-
-        if isinstance(data["s3object"], CaseInsensitiveDict):
-            documents = [data["s3object"]]
-        else:
-            documents = data["s3object"]
 
         for clause in clauses:
             if isinstance(clause, FunctionClause):
@@ -69,14 +65,11 @@ class SelectParser:
         for json_document in documents:
             filtered_document = dict()
             for clause in clauses:
+                # TODO: go through all keys, the table/file can be called anything - not just 's3object'
                 attr = clause.select(aliases, {"s3object": json_document})
-                print(f"{clause}.select == {attr}")
-                print(type(attr))
                 if attr is not None:
                     filtered_document.update(attr)
             result.append(filtered_document)
-        print(data)
-        print(result)
         return result
 
     def parse_clauses(self, select_clause: str) -> List[SelectClause]:

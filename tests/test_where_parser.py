@@ -54,60 +54,44 @@ class TestFilter:
     ]
 
     def test_simple(self):
-        aliases = {"s3object": "s3object"}
         filter_keys = ["s3object", "city"]
         filter_value = "Los Angeles"
-        data_key = "s3object"
         assert WhereParser().filter_rows(
-            aliases=aliases,
             filter_keys=filter_keys,
             filter_value=filter_value,
-            data_key=data_key,
             all_rows=TestFilter.all_rows,
         ) == [{"Name": "Vinod", "city": "Los Angeles"}]
 
     def test_alias(self):
-        aliases = {"s": "s3object"}
         filter_keys = ["s", "city"]
         filter_value = "Los Angeles"
-        data_key = "s3object"
         assert WhereParser().filter_rows(
-            aliases=aliases,
             filter_keys=filter_keys,
             filter_value=filter_value,
-            data_key=data_key,
             all_rows=TestFilter.all_rows,
         ) == [{"Name": "Vinod", "city": "Los Angeles"}]
 
     def test_alias_nested_key(self):
-        aliases = {"s3object": "s3object"}
         filter_keys = ["s3object", "notes", "extra"]
         filter_value = "y"
-        data_key = "s3object"
         assert WhereParser().filter_rows(
-            aliases=aliases,
             filter_keys=filter_keys,
             filter_value=filter_value,
-            data_key=data_key,
             all_rows=TestFilter.all_rows,
         ) == [{"Name": "Mary", "city": "Chicago", "notes": {"extra": "y"}}]
 
     @pytest.mark.xfail(message="Not yet implemented")
     def test_case_insensitivity(self):
-        aliases = {"s3object": "s3object"}
         # Filter by lower case "city"
         filter_keys = ["s3object", "city"]
         filter_value = "Chicago"
-        data_key = "s3object"
         # Data has upper case CITY
         all_rows = [
             {"Name": "Sam", "CITY": "Irvine"},
             {"Name": "Vinod", "City": "Los Angeles"},
         ]
         assert WhereParser().filter_rows(
-            aliases=aliases,
             filter_keys=filter_keys,
             filter_value=filter_value,
-            data_key=data_key,
             all_rows=all_rows,
         ) == [{"Name": "Jane", "City": "Chicago"}]

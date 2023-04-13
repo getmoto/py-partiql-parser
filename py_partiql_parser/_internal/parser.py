@@ -6,16 +6,16 @@ from .from_parser import FromParser
 from .json_parser import JsonParser
 from .select_parser import SelectParser
 from .where_parser import WhereParser
+from .utils import is_dict
 
 
 class Parser:
     RETURN_TYPE = Union[Dict[AnyStr, Any], List]
 
     def __init__(self, source_data: Dict[str, str]):
-        self.source_data = source_data
         # Source data is in the format: {source: json}
         # Where 'json' is one or more json documents separated by a newline
-        self.documents = {key: value for key, value in source_data.items()}
+        self.documents = source_data
 
     def parse(self, query: str) -> List[Dict[str, Any]]:
         query = query.replace("\n", " ")
@@ -24,18 +24,16 @@ class Parser:
         _ = clauses[0]
         # FROM
         from_clauses = FromParser().parse(clauses[2])
+        source_data = self.documents[list(from_clauses.values())[0]]
+        source_data = JsonParser().parse(source_data)
+        if is_dict(source_data):
+            source_data = [source_data]  # type: ignore
+
         # WHERE
         if len(clauses) > 3:
             where_clause = clauses[3]
-            self.documents = WhereParser(self.source_data).parse(
-                from_clauses, where_clause
-            )
-        else:
-            for key, value in self.documents.items():
-                self.documents[key] = JsonParser().parse(value)
-                if isinstance(self.documents[key], dict):
-                    self.documents[key] = [self.documents[key]]  # type: ignore
+            source_data = WhereParser(source_data).parse(where_clause)
 
         # SELECT
         select_clause = clauses[1]
-        return SelectParser().parse(select_clause, from_clauses, self.documents)
+        return SelectParser().parse(select_clause, from_clauses, source_data)
