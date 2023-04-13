@@ -25,7 +25,7 @@ class Parser:
         _ = clauses[0]
         # FROM
         from_clauses = FromParser().parse(clauses[2])
-        source_data = self.documents[list(from_clauses.values())[0]]
+        source_data = self.documents[list(from_clauses.values())[0].lower()]
         source_data = JsonParser().parse(source_data)
         if is_dict(source_data):
             source_data = [source_data]  # type: ignore

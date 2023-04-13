@@ -126,6 +126,14 @@ def test_aws_sample__object_select_all():
     result.should.equal([input_json_object])
 
 
+def test_aws_sample__s3object_is_case_insensitive():
+    query = "SELECT * FROM s3obJEct"
+    result = Parser(source_data={"s3object": json.dumps(input_json_object)}).parse(
+        query
+    )
+    result.should.equal([input_json_object])
+
+
 def test_aws_sample__object_select_attr():
     query = "SELECT s.a1 FROM s3object AS s"
     result = Parser(source_data={"s3object": json.dumps(input_json_object)}).parse(
