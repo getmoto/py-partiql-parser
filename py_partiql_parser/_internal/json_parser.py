@@ -49,6 +49,7 @@ class JsonParser:
             # Doesn't look like JSON - let's return as a variable
             return original if original.isnumeric() else Variable(original)
         section = None  # DICT_KEY | KEY_TO_VALUE | DICT_VAL | OBJECT_END
+        dict_key = None
         current_phrase = ""
         result: Dict[Any, Any] = CaseInsensitiveDict()
         tokenizer = tokenizer or ClauseTokenizer(original)

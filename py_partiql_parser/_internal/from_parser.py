@@ -31,7 +31,7 @@ class FromParser:
                     current_phrase = ""
                     section = "AS"
                 elif section == "ALIAS":
-                    alias = current_phrase
+                    alias = current_phrase  # noqa
                     current_phrase = ""
                     section = "NAME"
                 continue

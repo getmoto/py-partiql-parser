@@ -1,11 +1,11 @@
 import pytest
-from py_partiql_parser import Parser
+from py_partiql_parser import S3SelectParser
 from . import json_as_lines
 
 
 class TestCount:
     def setup_method(self):
-        self.parser = Parser(source_data={"s3object": json_as_lines})
+        self.parser = S3SelectParser(source_data={"s3object": json_as_lines})
 
     @pytest.mark.parametrize(
         "query,key,result",

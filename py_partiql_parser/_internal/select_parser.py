@@ -1,6 +1,5 @@
 from typing import Dict, Any, List, Optional
 
-from .case_insensitive_dict import CaseInsensitiveDict
 from .clause_tokenizer import ClauseTokenizer
 from .utils import find_nested_data_in_object, MissingVariable
 

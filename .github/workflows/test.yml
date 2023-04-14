@@ -26,6 +26,7 @@ jobs:
     - name: Lint
       run: |
         black --check .
+        flake8 py_partiql_parser/
 
   test:
     name: Unit test

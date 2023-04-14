@@ -1,7 +1,6 @@
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 from .clause_tokenizer import ClauseTokenizer
-from .json_parser import JsonParser
 from .utils import find_value_in_document
 
 
