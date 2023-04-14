@@ -1,22 +1,29 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from .case_insensitive_dict import CaseInsensitiveDict
 from .clause_tokenizer import ClauseTokenizer
-from .utils import find_nested_data_in_object
+from .utils import find_nested_data_in_object, MissingVariable
 
 
 class SelectClause:
-    def __init__(self, value: str):
+    def __init__(self, value: str, table_prefix: Optional[str] = None):
+        self.table_prefix = table_prefix
         self.value = value.strip()
 
     def select(self, aliases: Dict[str, str], document: Dict[str, Any]):
         if self.value == "*":
-            # return document[alias]
-            return document["s3object"]
+            if self.table_prefix:
+                return document[self.table_prefix]
+            else:
+                return document
         if "." in self.value:
             key, remaining = self.value.split(".", maxsplit=1)
             return find_nested_data_in_object(
                 select_clause=remaining, json_doc=document[aliases.get(key, key)]
+            )
+        elif not self.table_prefix:
+            return find_nested_data_in_object(
+                select_clause=self.value, json_doc=document
             )
         else:
             return document[aliases.get(self.value, self.value)]
@@ -48,6 +55,9 @@ class FunctionClause(SelectClause):
 
 
 class SelectParser:
+    def __init__(self, table_prefix: Optional[str]):
+        self.table_prefix = table_prefix
+
     def parse(
         self,
         select_clause: str,
@@ -63,11 +73,12 @@ class SelectParser:
         result: List[Dict[str, Any]] = []
 
         for json_document in documents:
+            if self.table_prefix is not None:
+                json_document = {self.table_prefix: json_document}
             filtered_document = dict()
             for clause in clauses:
-                # TODO: go through all keys, the table/file can be called anything - not just 's3object'
-                attr = clause.select(aliases, {"s3object": json_document})
-                if attr is not None:
+                attr = clause.select(aliases, json_document)
+                if attr is not None and not isinstance(attr, MissingVariable):
                     filtered_document.update(attr)
             result.append(filtered_document)
         return result
@@ -80,7 +91,11 @@ class SelectParser:
             c = tokenizer.next()
             if not c or c in [","]:
                 if current_clause != "":
-                    results.append(SelectClause(current_clause))
+                    results.append(
+                        SelectClause(
+                            value=current_clause, table_prefix=self.table_prefix
+                        )
+                    )
                 if not c:
                     break
                 else:

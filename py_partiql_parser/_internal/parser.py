@@ -1,6 +1,6 @@
 import re
 
-from typing import Dict, Any, Union, List, AnyStr
+from typing import Dict, Any, Union, List, AnyStr, Optional
 
 from .from_parser import FromParser
 from .json_parser import JsonParser
@@ -12,11 +12,11 @@ from .utils import is_dict
 class Parser:
     RETURN_TYPE = Union[Dict[AnyStr, Any], List]
 
-    def __init__(self, source_data: Dict[str, str], query_has_table_prefix=True):
+    def __init__(self, source_data: Dict[str, str], table_prefix: Optional[str]):
         # Source data is in the format: {source: json}
         # Where 'json' is one or more json documents separated by a newline
         self.documents = source_data
-        self.query_has_table_prefix = query_has_table_prefix
+        self.table_prefix = table_prefix
 
     def parse(self, query: str) -> List[Dict[str, Any]]:
         query = query.replace("\n", " ")
@@ -33,10 +33,22 @@ class Parser:
         # WHERE
         if len(clauses) > 3:
             where_clause = clauses[3]
-            source_data = WhereParser(source_data, self.query_has_table_prefix).parse(
+            source_data = WhereParser(source_data, self.table_prefix).parse(
                 where_clause
             )
 
         # SELECT
         select_clause = clauses[1]
-        return SelectParser().parse(select_clause, from_clauses, source_data)
+        return SelectParser(self.table_prefix).parse(
+            select_clause, from_clauses, source_data
+        )
+
+
+class S3SelectParser(Parser):
+    def __init__(self, source_data: Dict[str, str]):
+        super().__init__(source_data, table_prefix="s3object")
+
+
+class DynamoDBStatementParser(Parser):
+    def __init__(self, source_data: Dict[str, str]):
+        super().__init__(source_data, table_prefix=None)

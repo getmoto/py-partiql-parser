@@ -1,7 +1,7 @@
 import json
 import pytest
 import sure  # noqa
-from py_partiql_parser import Parser
+from py_partiql_parser import S3SelectParser
 from . import input_json_list, json_as_lines
 
 
@@ -23,7 +23,7 @@ input_json_object = {"a1": "b1", "a2": "b2"}
 @pytest.mark.xfail(reason="CSV functionality not yet implemented")
 def test_aws_sample__csv():
     query = "SELECT * FROM s3object s where s.\"Name\" = 'Jane'"
-    x = Parser(source_data={"s3object": input_data_csv}).parse(query)
+    x = S3SelectParser(source_data={"s3object": input_data_csv}).parse(query)
 
 
 @pytest.mark.xfail(
@@ -31,7 +31,7 @@ def test_aws_sample__csv():
 )
 def test_aws_sample__json__search_by_name():
     query = "SELECT * FROM s3object s where s.\"Name\" = 'Jane'"
-    result = Parser(source_data={"s3object": input_json_list}).parse(query)
+    result = S3SelectParser(source_data={"s3object": input_json_list}).parse(query)
     result.should.equal(
         [
             {
@@ -52,7 +52,7 @@ def test_aws_sample__json__search_by_name():
     ],
 )
 def test_aws_sample__json__search_by_city(query):
-    result = Parser(source_data={"s3object": json_as_lines}).parse(query)
+    result = S3SelectParser(source_data={"s3object": json_as_lines}).parse(query)
     result.should.have.length_of(4)
     result.should.contain(
         {
@@ -90,7 +90,7 @@ def test_aws_sample__json__search_by_city(query):
 
 def test_aws_sample__json_select_multiple_attrs__search_by_city():
     query = "SELECT s.name, s.city FROM s3object s where s.\"City\" = 'Chicago'"
-    result = Parser(source_data={"s3object": json_as_lines}).parse(query)
+    result = S3SelectParser(source_data={"s3object": json_as_lines}).parse(query)
     result.should.have.length_of(4)
     result.should.contain(
         {
@@ -120,23 +120,31 @@ def test_aws_sample__json_select_multiple_attrs__search_by_city():
 
 def test_aws_sample__object_select_all():
     query = "SELECT * FROM s3object"
-    result = Parser(source_data={"s3object": json.dumps(input_json_object)}).parse(
-        query
-    )
+    result = S3SelectParser(
+        source_data={"s3object": json.dumps(input_json_object)}
+    ).parse(query)
     result.should.equal([input_json_object])
 
 
 def test_aws_sample__s3object_is_case_insensitive():
     query = "SELECT * FROM s3obJEct"
-    result = Parser(source_data={"s3object": json.dumps(input_json_object)}).parse(
-        query
-    )
+    result = S3SelectParser(
+        source_data={"s3object": json.dumps(input_json_object)}
+    ).parse(query)
+    result.should.equal([input_json_object])
+
+
+def test_aws_sample__object_select_everything():
+    query = "SELECT s FROM s3object AS s"
+    result = S3SelectParser(
+        source_data={"s3object": json.dumps(input_json_object)}
+    ).parse(query)
     result.should.equal([input_json_object])
 
 
 def test_aws_sample__object_select_attr():
     query = "SELECT s.a1 FROM s3object AS s"
-    result = Parser(source_data={"s3object": json.dumps(input_json_object)}).parse(
-        query
-    )
+    result = S3SelectParser(
+        source_data={"s3object": json.dumps(input_json_object)}
+    ).parse(query)
     result.should.equal([{"a1": "b1"}])
