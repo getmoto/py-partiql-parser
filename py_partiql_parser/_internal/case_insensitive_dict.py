@@ -1,7 +1,9 @@
-try:
-    from collections import Mapping, MutableMapping
-except ImportError:
+import sys
+
+if sys.version_info[:2] >= (3, 8):
     from collections.abc import Mapping, MutableMapping
+else:
+    from collections import Mapping, MutableMapping
 from collections import OrderedDict
 
 

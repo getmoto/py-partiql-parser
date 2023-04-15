@@ -1,3 +1,4 @@
+import json
 import pytest
 from py_partiql_parser._internal.where_parser import S3WhereParser
 from py_partiql_parser._internal.where_parser import DynamoDBWhereParser
@@ -82,22 +83,6 @@ class TestFilter:
             filter_keys=filter_keys,
             filter_value=filter_value,
         ) == [{"Name": "Mary", "city": "Chicago", "notes": {"extra": "y"}}]
-
-    @pytest.mark.xfail(message="Not yet implemented")
-    def test_case_insensitivity(self):
-        # Filter by lower case "city"
-        filter_keys = ["s3object", "city"]
-        filter_value = "Chicago"
-        # Data has upper case CITY
-        all_rows = [
-            {"Name": "Sam", "CITY": "Irvine"},
-            {"Name": "Vinod", "City": "Los Angeles"},
-        ]
-        assert S3WhereParser().filter_rows(
-            filter_keys=filter_keys,
-            filter_value=filter_value,
-            all_rows=all_rows,
-        ) == [{"Name": "Jane", "City": "Chicago"}]
 
 
 class TestDynamoDBParse:

@@ -148,3 +148,18 @@ def test_aws_sample__object_select_attr():
         source_data={"s3object": json.dumps(input_json_object)}
     ).parse(query)
     result.should.equal([{"a1": "b1"}])
+
+
+def test_case_insensitivity():
+    # Filter by lower case "city"
+    query = "SELECT * from s3object where s3object.city = 'Los Angeles'"
+    # Data has upper case CITY
+    all_rows = (
+        json.dumps({"Name": "Sam", "CITY": "Irvine"})
+        + "\n"
+        + json.dumps({"Name": "Vinod", "City": "Los Angeles"})
+    )
+    parser = S3SelectParser(source_data={"s3object": all_rows})
+    assert parser.parse(query, parameters=None) == [
+        {"Name": "Vinod", "City": "Los Angeles"}
+    ]
