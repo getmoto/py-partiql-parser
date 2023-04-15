@@ -3,22 +3,30 @@ A tokenizer/parser/executor for the PartiQL-language, in Python.
 
 Much beta, such wow. Feel free to raise any issues you encounter.
 
-## Usage
-```
-original_json = {"a1": "b1", "a2": "b2"}
-from py_partiql_parser import Parser
-parser = Parser(source_data={"s3object": original_json})
+## S3 Usage
+```python
+import json
+from py_partiql_parser import S3SelectParser
+
+original_json = json.dumps({"a1": "b1", "a2": "b2"})
+parser = S3SelectParser(source_data={"s3object": original_json})
 result = parser.parse("SELECT * FROM s3object")
 ```
+## DynamoDB Usage
+```python
+import json
+from py_partiql_parser import DynamoDBStatementParser
+
+original_json = json.dumps({"a1": "b1", "a2": "b2"})
+parser = DynamoDBStatementParser(source_data={"table1", original_json})
+result = parser.parse("SELECT * from table1 WHERE a1 = ?", parameters=[{"S": "b1"}])
+```
+
 
 ## Meat
 The important logic of this library can be found here: https://github.com/bblommers/py-partiql-parser/blob/main/py_partiql_parser/_internal/parser.py
 
 It is implemented as a naive, dependency-free, TDD-first tokenizer.
-
-## Tests
-Tests based on real-world examples from users/AWS, and can be found here:
-https://github.com/getmoto/py-partiql-parser/blob/main/tests/test_aws_examples.py
 
 ## Outstanding
  - Support for functions such as `count(*)`

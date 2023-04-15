@@ -17,21 +17,26 @@ def test_table_with_single_row():
 
 def test_table_with_multiple_rows():
     query = "select * from msgs where body = 'other text'"
-    assert DynamoDBStatementParser(source_data={"msgs": double_doc}).parse(query) == [
-        input_object2
-    ]
+    assert DynamoDBStatementParser(source_data={"msgs": double_doc}).parse(
+        query, parameters=[]
+    ) == [input_object2]
 
 
 def test_nested_where():
     query = "select * from table where nested.item = 'sth'"
-    assert DynamoDBStatementParser(source_data={"table": double_doc}).parse(query) == [
-        input_object2
-    ]
+    assert DynamoDBStatementParser(source_data={"table": double_doc}).parse(
+        query, parameters=[]
+    ) == [input_object2]
 
 
 def test_nested_where__no_results():
     query = "select * from table where nested.item = 'other'"
-    assert DynamoDBStatementParser(source_data={"table": double_doc}).parse(query) == []
+    assert (
+        DynamoDBStatementParser(source_data={"table": double_doc}).parse(
+            query, parameters=[]
+        )
+        == []
+    )
 
 
 def test_select_single_key():
