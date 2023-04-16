@@ -8,10 +8,11 @@ class WhereParser:
     def __init__(self, source_data: Any):
         self.source_data = source_data
 
-    def parse_where_clause(self, where_clause: str) -> Tuple[List[str], str]:
+    @classmethod
+    def parse_where_clause(cls, where_clause: str) -> Tuple[List[str], str]:
         where_clause_parser = ClauseTokenizer(where_clause)
+        results = []
         keys: List[str] = []
-        value = ""
         section: Optional[str] = "KEY"
         current_phrase = ""
         while True:
@@ -35,9 +36,12 @@ class WhereParser:
                     section = "VALUE"
                     continue
                 if section == "VALUE":
-                    section = None
-                    value = current_phrase
+                    section = "END_VALUE"
+                    results.append((keys.copy(), current_phrase))
+                    keys.clear()
                     current_phrase = ""
+                    where_clause_parser.skip_white_space()
+                    continue
             if c in [" "] and section == "KEY":
                 if current_phrase != "":
                     keys.append(current_phrase)
@@ -46,31 +50,42 @@ class WhereParser:
                 where_clause_parser.skip_white_space()
                 section = "START_VALUE"
                 continue
+            if c in [" "] and section == "END_VALUE":
+                if current_phrase.upper() == "AND":
+                    current_phrase = ""
+                    section = "KEY"
+                    where_clause_parser.skip_white_space()
+                continue
             if c in ["?"] and section == "START_VALUE":
                 # Most values have to be surrounded by quotes
                 # Question marks are parameters, and are valid values on their own
-                value = c
-                section = "KEY"  # Next step is to look for other key/value pairs
+                results.append((keys.copy(), "?"))
+                keys.clear()
+                section = "END_VALUE"  # Next step is to look for other key/value pairs
                 continue
             if current_phrase == "" and section == "START_KEY":
                 section = "KEY"
-            if section in ["KEY", "VALUE"]:
+            if section in ["KEY", "VALUE", "END_VALUE"]:
                 current_phrase += c
-        return keys, value
+        return results
 
 
 class DynamoDBWhereParser(WhereParser):
     def parse(self, where_clause: str, parameters) -> Any:
-        filter_keys, filter_value = self.parse_where_clause(where_clause)
+        _filters = WhereParser.parse_where_clause(where_clause)
 
-        if filter_value == "?":
-            filter_value = parameters.pop(0)
+        _filters = [
+            (key, parameters.pop(0) if value == "?" else value)
+            for key, value in _filters
+        ]
 
-        return self.filter_rows(filter_keys, filter_value)
+        return self.filter_rows(_filters)
 
-    def filter_rows(self, filter_keys, filter_value):
-        def _filter(row):
-            return find_value_in_document(filter_keys, row) == filter_value
+    def filter_rows(self, _filters):
+        def _filter(row) -> bool:
+            return all(
+                [find_value_in_document(keys, row) == value for keys, value in _filters]
+            )
 
         return [row for row in self.source_data if _filter(row)]
 
@@ -78,13 +93,17 @@ class DynamoDBWhereParser(WhereParser):
 class S3WhereParser(WhereParser):
     def parse(self, where_clause: str, parameters) -> Any:
         # parameters argument is ignored - only relevant for DynamoDB
-        filter_keys, filter_value = self.parse_where_clause(where_clause)
+        _filters = WhereParser.parse_where_clause(where_clause)
 
-        return self.filter_rows(filter_keys, filter_value)
+        return self.filter_rows(_filters)
 
-    def filter_rows(self, filter_keys, filter_value):
+    def filter_rows(self, _filters):
         def _filter(row):
-            actual_value = find_value_in_document(filter_keys[1:], row)
-            return actual_value == filter_value
+            return all(
+                [
+                    find_value_in_document(keys[1:], row) == value
+                    for keys, value in _filters
+                ]
+            )
 
         return [row for row in self.source_data if _filter(row)]

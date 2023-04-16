@@ -63,7 +63,7 @@ class SelectParser:
         aliases: Dict[str, Any],
         documents: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
-        clauses = self.parse_clauses(select_clause)
+        clauses = SelectParser.parse_clauses(select_clause, prefix=self.table_prefix)
 
         for clause in clauses:
             if isinstance(clause, FunctionClause):
@@ -82,7 +82,10 @@ class SelectParser:
             result.append(filtered_document)
         return result
 
-    def parse_clauses(self, select_clause: str) -> List[SelectClause]:
+    @classmethod
+    def parse_clauses(
+        cls, select_clause: str, prefix: Optional[str] = None
+    ) -> List[SelectClause]:
         results = []
         tokenizer = ClauseTokenizer(select_clause)
         current_clause = fn_name = ""
@@ -91,9 +94,7 @@ class SelectParser:
             if not c or c in [","]:
                 if current_clause != "":
                     results.append(
-                        SelectClause(
-                            value=current_clause, table_prefix=self.table_prefix
-                        )
+                        SelectClause(value=current_clause, table_prefix=prefix)
                     )
                 if not c:
                     break

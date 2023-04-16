@@ -1,6 +1,6 @@
 from .case_insensitive_dict import CaseInsensitiveDict
 from .json_parser import MissingVariable, Variable
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Tuple, Union
 
 
 def is_dict(dct):
@@ -80,3 +80,17 @@ def find_value_in_document(keys: List[str], json_doc):
     if len(keys) == 1:
         return json_doc.get(keys[0])
     return find_value_in_document(keys[1:], json_doc.get(keys[0], {}))
+
+
+class QueryMetadata:
+    def __init__(
+        self, tables: Dict[str, str], where_clauses: List[Tuple[List[str], str]] = None
+    ):
+        self._tables = tables
+        self._where_clauses = where_clauses or []
+
+    def get_table_names(self) -> List[str]:
+        return list(self._tables.values())
+
+    def get_filter_names(self) -> List[str]:
+        return [".".join(keys) for keys, _ in self._where_clauses]

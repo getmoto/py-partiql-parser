@@ -1,8 +1,13 @@
 import json
 from py_partiql_parser import DynamoDBStatementParser
 
-input_object1 = {"id": "msg1", "body": "some text"}
-input_object2 = {"id": "msg2", "body": "other text", "nested": {"item": "sth"}}
+input_object1 = {"id": "msg1", "k2": "v2", "body": "some text"}
+input_object2 = {
+    "id": "msg2",
+    "k2": "v2",
+    "body": "other text",
+    "nested": {"item": "sth"},
+}
 
 simple_doc = json.dumps(input_object1)
 double_doc = simple_doc + "\n" + json.dumps(input_object2)
@@ -58,3 +63,9 @@ def test_select_missing_key():
     query = "select id, nested from table"
     result = DynamoDBStatementParser(source_data={"table": double_doc}).parse(query)
     assert result == [{"id": "msg1"}, {"id": "msg2", "nested": {"item": "sth"}}]
+
+
+def test_multiple_where_clauses():
+    query = "SELECT * from table WHERE k2 = 'v2' and body = 'some text'"
+    result = DynamoDBStatementParser(source_data={"table": double_doc}).parse(query)
+    assert result == [input_object1]

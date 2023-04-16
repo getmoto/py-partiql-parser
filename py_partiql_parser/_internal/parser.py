@@ -5,8 +5,8 @@ from typing import Dict, Any, Union, List, AnyStr, Optional
 from .from_parser import FromParser
 from .json_parser import JsonParser
 from .select_parser import SelectParser
-from .where_parser import DynamoDBWhereParser, S3WhereParser
-from .utils import is_dict
+from .where_parser import DynamoDBWhereParser, S3WhereParser, WhereParser
+from .utils import is_dict, QueryMetadata
 
 
 class Parser:
@@ -60,3 +60,19 @@ class DynamoDBStatementParser(Parser):
         super().__init__(
             source_data, table_prefix=None, where_parser=DynamoDBWhereParser
         )
+
+    @classmethod
+    def get_query_metadata(cls, query: str):
+        query = query.replace("\n", " ")
+        clauses = re.split("SELECT | FROM | WHERE ", query, flags=re.IGNORECASE)
+
+        from_clauses = FromParser().parse(clauses[2])
+
+        # WHERE
+        if len(clauses) > 3:
+            where_clause = clauses[3]
+            where = WhereParser.parse_where_clause(where_clause)
+        else:
+            where = None
+
+        return QueryMetadata(tables=from_clauses, where_clauses=where)
