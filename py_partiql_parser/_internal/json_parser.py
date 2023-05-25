@@ -1,3 +1,4 @@
+from json import JSONEncoder
 from typing import Dict, Any, List, Union
 
 from .clause_tokenizer import ClauseTokenizer
@@ -193,3 +194,10 @@ class JsonParser:
             elif section in ["VALUE", "VAR_VALUE"]:
                 current_phrase += c
         return result
+
+
+class SelectEncoder(JSONEncoder):
+    def default(self, o):
+        if isinstance(o, Variable) and o.value is None:
+            return None
+        return o

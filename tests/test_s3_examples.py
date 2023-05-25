@@ -1,7 +1,7 @@
 import json
 import pytest
 import sure  # noqa
-from py_partiql_parser import S3SelectParser
+from py_partiql_parser import S3SelectParser, SelectEncoder
 from . import input_json_list, json_as_lines
 
 
@@ -163,3 +163,19 @@ def test_case_insensitivity():
     assert parser.parse(query, parameters=None) == [
         {"Name": "Vinod", "City": "Los Angeles"}
     ]
+
+
+def test_json_output_can_be_dumped():
+    query = "select * from s3object s"
+    input_with_none = json.dumps(
+        [
+            {
+                "name": "Janelyn M",
+                "date": "2020-02-23T00:00:00",
+                "city": "Chicago",
+                "kids": None,
+            },
+        ]
+    )
+    result = S3SelectParser(source_data={"s3object": input_with_none}).parse(query)
+    assert input_with_none == json.dumps(result, cls=SelectEncoder)
