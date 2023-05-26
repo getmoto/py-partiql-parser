@@ -161,6 +161,8 @@ class JsonParser:
             if c == "{":
                 tokenizer.revert()  # Ensure we start the new parser with the initial {
                 result.append(self.parse(original, tokenizer, only_parse_initial=True))
+                if tokenizer.current() == "]":
+                    break
                 tokenizer.skip_until([","])
                 tokenizer.skip_white_space()
             elif c.isnumeric() and section is None:
@@ -200,4 +202,6 @@ class SelectEncoder(JSONEncoder):
     def default(self, o):
         if isinstance(o, Variable) and o.value is None:
             return None
-        return o
+        if isinstance(o, CaseInsensitiveDict):
+            return dict(o.items())
+        return JSONEncoder.default(self, o)

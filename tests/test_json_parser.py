@@ -1,5 +1,6 @@
 import json
 import sure  # noqa
+import pytest
 from py_partiql_parser._internal.json_parser import JsonParser, Variable
 
 
@@ -98,3 +99,15 @@ def test_parse_multiple_objects():
     JsonParser().parse(multi_object_string).should.equal(
         [{"a1": "v1", "a1": "v2"}, {"a2": "w1", "a2": "w2"}, {"a3": "z"}]
     )
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        [{"staff": [{"name": "J M"}], "country": "USA"}],
+        {"staff": [{"name": "J M"}], "country": "USA"},
+        [{"staff": [{"name": "J M"}, {"name": "M, J"}], "country": "USA"}],
+    ],
+)
+def test_list_and_string_are_siblings(source):
+    assert JsonParser().parse(json.dumps(source)) == source
