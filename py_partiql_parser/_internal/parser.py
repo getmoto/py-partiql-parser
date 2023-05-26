@@ -3,7 +3,6 @@ import re
 from typing import Dict, Any, Union, List, AnyStr, Optional
 
 from .from_parser import FromParser
-from .json_parser import JsonParser
 from .select_parser import SelectParser
 from .where_parser import DynamoDBWhereParser, S3WhereParser, WhereParser
 from .utils import is_dict, QueryMetadata
@@ -30,9 +29,9 @@ class Parser:
         # First clause is whatever comes in front of SELECT - which should be nothing
         _ = clauses[0]
         # FROM
-        from_clauses = FromParser().parse(clauses[2])
-        source_data = self.documents[list(from_clauses.values())[0].lower()]
-        source_data = JsonParser().parse(source_data)
+        from_parser = FromParser()
+        from_clauses = from_parser.parse(clauses[2])
+        source_data = from_parser.get_source_data(self.documents)
         if is_dict(source_data):
             source_data = [source_data]  # type: ignore
 

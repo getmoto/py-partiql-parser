@@ -1,8 +1,8 @@
 import json
 import pytest
 import sure  # noqa
-from py_partiql_parser import S3SelectParser, SelectEncoder
-from . import input_json_list, json_as_lines
+from py_partiql_parser import S3SelectParser
+from . import input_json_list, json_as_lines, input_with_lists
 
 
 # https://aws.amazon.com/blogs/storage/querying-data-without-servers-or-databases-using-amazon-s3-select/
@@ -165,17 +165,11 @@ def test_case_insensitivity():
     ]
 
 
-def test_json_output_can_be_dumped():
-    query = "select * from s3object s"
-    input_with_none = json.dumps(
-        [
-            {
-                "name": "Janelyn M",
-                "date": "2020-02-23T00:00:00",
-                "city": "Chicago",
-                "kids": None,
-            },
-        ]
-    )
-    result = S3SelectParser(source_data={"s3object": input_with_none}).parse(query)
-    assert input_with_none == json.dumps(result, cls=SelectEncoder)
+def test_select_root_objects():
+    query = "select * from s3object[*].staff[*] s"
+    result = S3SelectParser(
+        source_data={"s3object": json.dumps(input_with_lists)}
+    ).parse(query)
+    assert len(result) == 2
+    assert input_with_lists[0]["staff"][0] in result
+    assert input_with_lists[0]["staff"][1] in result

@@ -47,3 +47,24 @@ input_json_list = [
 
 
 json_as_lines = "\n".join([json.dumps(x) for x in input_json_list])
+
+
+input_with_lists = [
+    {
+        "staff": [
+            {
+                "name": "Janelyn M",
+                "date": "2020-02-23T00:00:00",
+                "city": "Chicago",
+                "kids": 2,
+            },
+            {
+                "name": "Stacy P",
+                "date": "2020-02-28T00:00:00",
+                "city": "Seattle",
+                "kids": 1,
+            },
+        ],
+        "country": "USA",
+    }
+]
