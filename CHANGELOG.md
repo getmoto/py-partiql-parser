@@ -1,6 +1,15 @@
 CHANGELOG
 =========
 
+0.3.2
+-----
+ - Improves the SelectEncoder behaviour to also encode CaseInsensitiveDict's
+ - Ensure FROM-queries such as `s3object[*]` do not fail (NOTE: the correct behaviour is not correct yet)
+
+0.3.1
+-----
+ - Expose a custom JSON encoder, `SelectEncoder`, in order to encode custom objects returned by our API such as `Variable`
+   `json.dumps(x, indent=None, separators=(",", ":"), cls=SelectEncoder)`
 
 0.3.0
 -----
