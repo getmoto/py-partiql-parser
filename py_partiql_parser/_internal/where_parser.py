@@ -100,10 +100,7 @@ class S3WhereParser(WhereParser):
     def filter_rows(self, _filters):
         def _filter(row):
             return all(
-                [
-                    find_value_in_document(keys, row) == value
-                    for keys, value in _filters
-                ]
+                [find_value_in_document(keys, row) == value for keys, value in _filters]
             )
 
         return [row for row in self.source_data if _filter(row)]

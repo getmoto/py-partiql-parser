@@ -81,7 +81,11 @@ class SelectParser:
                 if attr is not None and not isinstance(attr, MissingVariable):
                     # Specific usecase:
                     # select * from s3object[*].Name my_n
-                    if "." in list(aliases.values())[0] and list(aliases.keys())[0] in attr and select_clause == "*":
+                    if (
+                        "." in list(aliases.values())[0]
+                        and list(aliases.keys())[0] in attr
+                        and select_clause == "*"
+                    ):
                         filtered_document.update({"_1": attr[list(aliases.keys())[0]]})
                     else:
                         filtered_document.update(attr)

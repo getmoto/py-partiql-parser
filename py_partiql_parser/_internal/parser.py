@@ -56,14 +56,20 @@ class Parser:
 class S3SelectParser(Parser):
     def __init__(self, source_data: Dict[str, str]):
         super().__init__(
-            source_data, table_prefix="s3object", from_parser=S3FromParser, where_parser=S3WhereParser
+            source_data,
+            table_prefix="s3object",
+            from_parser=S3FromParser,
+            where_parser=S3WhereParser,
         )
 
 
 class DynamoDBStatementParser(Parser):
     def __init__(self, source_data: Dict[str, str]):
         super().__init__(
-            source_data, table_prefix=None, from_parser=DynamoDBFromParser, where_parser=DynamoDBWhereParser
+            source_data,
+            table_prefix=None,
+            from_parser=DynamoDBFromParser,
+            where_parser=DynamoDBWhereParser,
         )
 
     @classmethod

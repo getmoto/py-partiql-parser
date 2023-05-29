@@ -78,7 +78,6 @@ class FromParser:
 
 
 class S3FromParser(FromParser):
-
     def get_source_data(self, documents: Dict[str, str]):
         from_alias = list(self.clauses.keys())[0].lower()
         from_query = list(self.clauses.values())[0].lower()
@@ -88,7 +87,9 @@ class S3FromParser(FromParser):
         key_has_asterix = from_query.endswith("[*]")
         from_query = from_query[0:-3] if key_has_asterix else from_query
         from_alias = from_alias[0:-3] if from_alias.endswith("[*]") else from_alias
-        doc_is_list = documents[from_query].startswith("[") and documents[from_query].endswith("]")
+        doc_is_list = documents[from_query].startswith("[") and documents[
+            from_query
+        ].endswith("]")
 
         source_data = JsonParser().parse(documents[from_query])
         if doc_is_list:
@@ -130,7 +131,9 @@ class S3FromParser(FromParser):
                 # The previous key was a regular key
                 # Assume that the result consists of a singular JSON document
                 if new_key in source_data:
-                    doc_is_list = source_data[new_key].startswith("[") and source_data[new_key].endswith("]")
+                    doc_is_list = source_data[new_key].startswith("[") and source_data[
+                        new_key
+                    ].endswith("]")
                     source_data = JsonParser().parse(source_data[new_key])
                     if root_doc and doc_is_list:
                         # AWS behaviour when the root-document is a list
@@ -150,7 +153,6 @@ class S3FromParser(FromParser):
 
 
 class DynamoDBFromParser(FromParser):
-
     def get_source_data(self, documents: Dict[str, str]):
         source_data = documents[list(self.clauses.values())[0].lower()]
         return JsonParser().parse(source_data)
