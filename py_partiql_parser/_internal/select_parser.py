@@ -1,7 +1,7 @@
 from typing import Dict, Any, List, Optional
 
 from .clause_tokenizer import ClauseTokenizer
-from .utils import find_nested_data_in_object, MissingVariable
+from .utils import find_nested_data_in_object, MissingVariable, is_dict
 
 
 class SelectClause:
@@ -9,23 +9,26 @@ class SelectClause:
         self.table_prefix = table_prefix
         self.value = value.strip()
 
-    def select(self, aliases: Dict[str, str], document: Dict[str, Any]):
+    def select(self, document: Dict[str, Any]):
         if self.value == "*":
-            if self.table_prefix:
+            if self.table_prefix and self.table_prefix in document:
                 return document[self.table_prefix]
             else:
                 return document
         if "." in self.value:
             key, remaining = self.value.split(".", maxsplit=1)
             return find_nested_data_in_object(
-                select_clause=remaining, json_doc=document[aliases.get(key, key)]
+                select_clause=remaining, json_doc=document[key]
             )
         elif not self.table_prefix:
             return find_nested_data_in_object(
                 select_clause=self.value, json_doc=document
             )
         else:
-            return document[aliases.get(self.value, self.value)]
+            if is_dict(document[self.value]):
+                return document[self.value]
+            else:
+                return {self.value: document[self.value]}
 
     def __repr__(self):
         return f"<SelectClause({self.value})>"
@@ -72,13 +75,16 @@ class SelectParser:
         result: List[Dict[str, Any]] = []
 
         for json_document in documents:
-            if self.table_prefix is not None:
-                json_document = {self.table_prefix: json_document}
             filtered_document = dict()
             for clause in clauses:
-                attr = clause.select(aliases, json_document)
+                attr = clause.select(json_document)
                 if attr is not None and not isinstance(attr, MissingVariable):
-                    filtered_document.update(attr)
+                    # Specific usecase:
+                    # select * from s3object[*].Name my_n
+                    if "." in list(aliases.values())[0] and list(aliases.keys())[0] in attr and select_clause == "*":
+                        filtered_document.update({"_1": attr[list(aliases.keys())[0]]})
+                    else:
+                        filtered_document.update(attr)
             result.append(filtered_document)
         return result
 

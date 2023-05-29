@@ -45,9 +45,11 @@ class CaseInsensitiveDict(MutableMapping):
         # Compare insensitively
         return dict(self.lower_items()) == dict(other.lower_items())
 
-    def get_original(self, key):
+    def get_original(self, key, get_default=None):
+        if key.lower() not in self._store:
+            return get_default
         original_key, original_value = self._store[key.lower()]
-        return {original_key: original_value}
+        return CaseInsensitiveDict({original_key: original_value})
 
     # Copy is required
     def copy(self):

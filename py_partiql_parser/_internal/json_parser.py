@@ -148,6 +148,7 @@ class JsonParser:
                         section = "VAR_VALUE"
                 if section in ["DICT_KEY", "DICT_VAL", "INT_VALUE", "VAR_VALUE"]:
                     current_phrase += c
+
         return result
 
     def _parse_list(self, original, tokenizer) -> Any:

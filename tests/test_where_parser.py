@@ -73,7 +73,7 @@ class TestFilter:
     ]
 
     def test_simple(self):
-        filter_keys = ["s3object", "city"]
+        filter_keys = ["city"]
         filter_value = "Los Angeles"
         assert S3WhereParser(TestFilter.all_rows).filter_rows(
             _filters=[(filter_keys, filter_value)]
@@ -87,14 +87,14 @@ class TestFilter:
         ) == [{"Name": "Vinod", "city": "Los Angeles"}]
 
     def test_alias(self):
-        filter_keys = ["s", "city"]
+        filter_keys = ["city"]
         filter_value = "Los Angeles"
         assert S3WhereParser(TestFilter.all_rows).filter_rows(
             _filters=[(filter_keys, filter_value)]
         ) == [{"Name": "Vinod", "city": "Los Angeles"}]
 
     def test_alias_nested_key(self):
-        filter_keys = ["s3object", "notes", "extra"]
+        filter_keys = ["notes", "extra"]
         filter_value = "y"
         assert S3WhereParser(TestFilter.all_rows).filter_rows(
             _filters=[(filter_keys, filter_value)]

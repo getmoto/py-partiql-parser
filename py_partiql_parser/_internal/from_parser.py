@@ -2,6 +2,7 @@ from typing import Dict, Any
 
 from .clause_tokenizer import ClauseTokenizer
 from .json_parser import JsonParser
+from .utils import CaseInsensitiveDict
 
 
 class FromParser:
@@ -75,19 +76,81 @@ class FromParser:
         self.clauses = clauses
         return clauses
 
+
+class S3FromParser(FromParser):
+
     def get_source_data(self, documents: Dict[str, str]):
+        from_alias = list(self.clauses.keys())[0].lower()
+        from_query = list(self.clauses.values())[0].lower()
+        if "." in from_query:
+            return self._get_nested_source_data(documents)
+
+        key_has_asterix = from_query.endswith("[*]")
+        from_query = from_query[0:-3] if key_has_asterix else from_query
+        from_alias = from_alias[0:-3] if from_alias.endswith("[*]") else from_alias
+        doc_is_list = documents[from_query].startswith("[") and documents[from_query].endswith("]")
+
+        source_data = JsonParser().parse(documents[from_query])
+        if doc_is_list:
+            return {"_1": source_data}
+        elif from_alias:
+            if isinstance(source_data, list):
+                return [CaseInsensitiveDict({from_alias: doc}) for doc in source_data]
+            else:
+                return CaseInsensitiveDict({from_alias: source_data})
+        else:
+            return source_data
+
+    def _get_nested_source_data(self, documents: Dict[str, str]):
+        """
+        Our FROM-clauses are nested, meaning we need to dig into the provided document to return the key that we need
+           --> FROM s3object.name as name
+        """
+        root_doc = True
         source_data = documents
-        for key in list(self.clauses.values())[0].lower().split("."):
-            if key in source_data:
-                source_data = JsonParser().parse(source_data[key])
-            elif key.endswith("[*]"):
-                if isinstance(source_data, dict):
-                    source_data = JsonParser().parse(source_data[key[0:-3]])
-                elif isinstance(source_data, list):
-                    new_source = []
-                    for row in source_data:
-                        if isinstance(row[key[0:-3]], list):
-                            new_source.extend(row[key[0:-3]])
-                    source_data = new_source
+        iterate_over_docs = False
+        entire_key = list(self.clauses.values())[0].lower().split(".")
+        alias = list(self.clauses.keys())[0]
+        if alias.endswith("[*]"):
+            alias = alias[0:-3]
+        key_so_far = []
+        for key in entire_key:
+            key_so_far.append(key)
+            key_has_asterix = key.endswith("[*]") and key[0:-3] in source_data
+            new_key = key[0:-3] if key_has_asterix else key
+            if iterate_over_docs and isinstance(source_data, list):
+                # The previous key ended in [*]
+                # Iterate over all docs in the result, and only return the requested source key
+                if key_so_far == entire_key:
+                    # If we have an alias, we have to use that instead of the original name
+                    source_data = [{alias: doc.get(new_key, {})} for doc in source_data]
+                else:
+                    source_data = [doc.get_original(new_key, {}) for doc in source_data]
+            else:
+                # The previous key was a regular key
+                # Assume that the result consists of a singular JSON document
+                if new_key in source_data:
+                    doc_is_list = source_data[new_key].startswith("[") and source_data[new_key].endswith("]")
+                    source_data = JsonParser().parse(source_data[new_key])
+                    if root_doc and doc_is_list:
+                        # AWS behaviour when the root-document is a list
+                        source_data = {"_1": source_data}
+                    elif key_so_far == entire_key:
+                        if isinstance(source_data, list):
+                            source_data = [{alias: doc} for doc in source_data]
+                        else:
+                            source_data = {alias: source_data}
+                else:
+                    source_data = {}
+
+            iterate_over_docs = key_has_asterix
+            root_doc = False
 
         return source_data
+
+
+class DynamoDBFromParser(FromParser):
+
+    def get_source_data(self, documents: Dict[str, str]):
+        source_data = documents[list(self.clauses.values())[0].lower()]
+        return JsonParser().parse(source_data)

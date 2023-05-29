@@ -165,11 +165,53 @@ def test_case_insensitivity():
     ]
 
 
-def test_select_root_objects():
-    query = "select * from s3object[*].staff[*] s"
+def test_select_doc_using_asterisk():
+    query = "select * from s3object[*]"
+    result = S3SelectParser(
+        source_data={"s3object": json_as_lines}
+    ).parse(query)
+    assert len(result) == 7
+    assert {'Name': 'Sam', 'PhoneNumber': '(949) 555-6701', 'City': 'Irvine', 'Occuption': 'Solutions Architect'} in result
+
+
+@pytest.mark.parametrize("query",
+                         ["select my_n from s3object[*].Name my_n",
+                          "select my_n from s3object[*].Name as my_n"])
+def test_select_specific_object_doc_using_named_asterisk(query):
+    result = S3SelectParser(
+        source_data={"s3object": json_as_lines}
+    ).parse(query)
+    assert len(result) == 7
+    assert {'my_n': 'Sam'} in result
+    assert {'my_n': 'Jeff'} in result
+
+
+@pytest.mark.parametrize("query",
+                         ["select * from s3object[*].Name my_n",
+                          "select * from s3object[*].Name as my_n"])
+def test_select_nested_object_using_named_asterisk(query):
+    result = S3SelectParser(
+        source_data={"s3object": json_as_lines}
+    ).parse(query)
+    assert len(result) == 7
+    assert {'_1': 'Sam'} in result
+    assert {'_1': 'Jeff'} in result
+
+
+def test_select_list_using_asterisk():
+    query = "select * from s3object[*] s"
     result = S3SelectParser(
         source_data={"s3object": json.dumps(input_with_lists)}
     ).parse(query)
-    assert len(result) == 2
-    assert input_with_lists[0]["staff"][0] in result
-    assert input_with_lists[0]["staff"][1] in result
+    assert result == [{'_1': input_with_lists}]
+
+
+@pytest.mark.parametrize("query", [
+"select * from s3object[*].staff s",
+"select * from s3object[*].staff[*] s"
+])
+def test_select_nested_list_using_asterisk(query):
+    result = S3SelectParser(
+        source_data={"s3object": json.dumps(input_with_lists)}
+    ).parse(query)
+    assert result == [{}]
