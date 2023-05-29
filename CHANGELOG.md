@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+0.3.3
+-----
+ - S3: Fix behaviour for nested FROM-queries (s3object[*].name)
+
 0.3.2
 -----
  - Improves the SelectEncoder behaviour to also encode CaseInsensitiveDict's
