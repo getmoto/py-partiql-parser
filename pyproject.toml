@@ -9,6 +9,11 @@ authors = [{name="Bert Blommers", email="info@bertblommers.nl"}]
 
 dependencies = []
 
+[project.urls]
+"Homepage" = "https://github.com/getmoto/py-partiql-parser"
+"Bug Tracker" = "https://github.com/getmoto/py-partiql-parser/issues"
+"ChangeLog" = "https://github.com/getmoto/py-partiql-parser/blob/main/CHANGELOG.md"
+
 [tool.setuptools]
 packages = [
     "tests"

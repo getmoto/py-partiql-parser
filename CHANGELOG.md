@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+0.3.4
+-----
+ - Packaging improvements: Include `tests/__init__.py` in the release and add project links to PyPi
+
 0.3.3
 -----
  - S3: Fix behaviour for nested FROM-queries (s3object[*].name)
