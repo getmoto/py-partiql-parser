@@ -9,6 +9,11 @@ authors = [{name="Bert Blommers", email="info@bertblommers.nl"}]
 
 dependencies = []
 
+[tool.setuptools]
+packages = [
+    "tests"
+]
+
 [project.optional-dependencies]
 dev = [
     "black==22.6.0",
