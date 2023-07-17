@@ -16,6 +16,8 @@ dependencies = []
 
 [tool.setuptools]
 packages = [
+    "py_partiql_parser",
+    "py_partiql_parser._internal",
     "tests"
 ]
 
