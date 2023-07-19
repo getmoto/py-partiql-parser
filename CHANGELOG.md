@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+0.3.5
+-----
+ - Packaging improvements: Include source-files in the release, and update the version nr
+
 0.3.4
 -----
  - Packaging improvements: Include `tests/__init__.py` in the release and add project links to PyPi
