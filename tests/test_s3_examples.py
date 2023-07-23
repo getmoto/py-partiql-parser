@@ -1,6 +1,5 @@
 import json
 import pytest
-import sure  # noqa
 from py_partiql_parser import S3SelectParser
 from . import input_json_list, json_as_lines, input_with_lists
 
@@ -32,16 +31,14 @@ def test_aws_sample__csv():
 def test_aws_sample__json__search_by_name():
     query = "SELECT * FROM s3object s where s.\"Name\" = 'Jane'"
     result = S3SelectParser(source_data={"s3object": input_json_list}).parse(query)
-    result.should.equal(
-        [
-            {
-                "Name": "Jane",
-                "PhoneNumber": "(949) 555-6704",
-                "City": "Chicago",
-                "Occuption": "Developer",
-            }
-        ]
-    )
+    assert result == [
+        {
+            "Name": "Jane",
+            "PhoneNumber": "(949) 555-6704",
+            "City": "Chicago",
+            "Occuption": "Developer",
+        }
+    ]
 
 
 @pytest.mark.parametrize(
@@ -53,69 +50,53 @@ def test_aws_sample__json__search_by_name():
 )
 def test_aws_sample__json__search_by_city(query):
     result = S3SelectParser(source_data={"s3object": json_as_lines}).parse(query)
-    result.should.have.length_of(4)
-    result.should.contain(
-        {
-            "Name": "Jane",
-            "PhoneNumber": "(949) 555-6704",
-            "City": "Chicago",
-            "Occuption": "Developer",
-        }
-    )
-    result.should.contain(
-        {
-            "Name": "Sean",
-            "PhoneNumber": "(949) 555-6705",
-            "City": "Chicago",
-            "Occuption": "Developer",
-        }
-    )
-    result.should.contain(
-        {
-            "Name": "Mary",
-            "PhoneNumber": "(949) 555-6706",
-            "City": "Chicago",
-            "Occuption": "Developer",
-        }
-    )
-    result.should.contain(
-        {
-            "Name": "Kate",
-            "PhoneNumber": "(949) 555-6707",
-            "City": "Chicago",
-            "Occuption": "Developer",
-        }
-    )
+    assert len(result) == 4
+    assert {
+        "Name": "Jane",
+        "PhoneNumber": "(949) 555-6704",
+        "City": "Chicago",
+        "Occuption": "Developer",
+    } in result
+    assert {
+        "Name": "Sean",
+        "PhoneNumber": "(949) 555-6705",
+        "City": "Chicago",
+        "Occuption": "Developer",
+    } in result
+    assert {
+        "Name": "Mary",
+        "PhoneNumber": "(949) 555-6706",
+        "City": "Chicago",
+        "Occuption": "Developer",
+    } in result
+    assert {
+        "Name": "Kate",
+        "PhoneNumber": "(949) 555-6707",
+        "City": "Chicago",
+        "Occuption": "Developer",
+    } in result
 
 
 def test_aws_sample__json_select_multiple_attrs__search_by_city():
     query = "SELECT s.name, s.city FROM s3object s where s.\"City\" = 'Chicago'"
     result = S3SelectParser(source_data={"s3object": json_as_lines}).parse(query)
-    result.should.have.length_of(4)
-    result.should.contain(
-        {
-            "Name": "Jane",
-            "City": "Chicago",
-        }
-    )
-    result.should.contain(
-        {
-            "Name": "Sean",
-            "City": "Chicago",
-        }
-    )
-    result.should.contain(
-        {
-            "Name": "Mary",
-            "City": "Chicago",
-        }
-    )
-    result.should.contain(
-        {
-            "Name": "Kate",
-            "City": "Chicago",
-        }
-    )
+    assert len(result) == 4
+    assert {
+        "Name": "Jane",
+        "City": "Chicago",
+    } in result
+    assert {
+        "Name": "Sean",
+        "City": "Chicago",
+    } in result
+    assert {
+        "Name": "Mary",
+        "City": "Chicago",
+    } in result
+    assert {
+        "Name": "Kate",
+        "City": "Chicago",
+    } in result
 
 
 def test_aws_sample__object_select_all():
@@ -123,7 +104,7 @@ def test_aws_sample__object_select_all():
     result = S3SelectParser(
         source_data={"s3object": json.dumps(input_json_object)}
     ).parse(query)
-    result.should.equal([input_json_object])
+    assert result == [input_json_object]
 
 
 def test_aws_sample__s3object_is_case_insensitive():
@@ -131,7 +112,7 @@ def test_aws_sample__s3object_is_case_insensitive():
     result = S3SelectParser(
         source_data={"s3object": json.dumps(input_json_object)}
     ).parse(query)
-    result.should.equal([input_json_object])
+    assert result == [input_json_object]
 
 
 def test_aws_sample__object_select_everything():
@@ -139,7 +120,7 @@ def test_aws_sample__object_select_everything():
     result = S3SelectParser(
         source_data={"s3object": json.dumps(input_json_object)}
     ).parse(query)
-    result.should.equal([input_json_object])
+    assert result == [input_json_object]
 
 
 def test_aws_sample__object_select_attr():
@@ -147,7 +128,7 @@ def test_aws_sample__object_select_attr():
     result = S3SelectParser(
         source_data={"s3object": json.dumps(input_json_object)}
     ).parse(query)
-    result.should.equal([{"a1": "b1"}])
+    assert result == [{"a1": "b1"}]
 
 
 def test_case_insensitivity():
