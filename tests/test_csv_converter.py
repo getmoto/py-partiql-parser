@@ -1,6 +1,5 @@
 from py_partiql_parser._internal.csv_converter import csv_to_json
 import json
-import sure  # noqa
 
 
 input_csv = """Sam,(949) 555-6701,Irvine,Solutions Architect
@@ -22,19 +21,19 @@ input_with_header = (
 def test_csv_to_json():
     result = csv_to_json(input_csv)
     lines = result.split("\n")
-    lines.should.have.length_of(7)
+    assert len(lines) == 7
 
     line0 = json.loads(lines[0])
-    line0.should.have.key("_1").equals("Sam")
+    assert line0["_1"] == "Sam"
 
 
 def test_csv_to_json_with_headers():
     result = csv_to_json(input_with_header, headers_included=True)
     lines = result.split("\n")
-    lines.should.have.length_of(7)
+    assert len(lines) == 7
 
     line0 = json.loads(lines[0])
-    line0.should.have.key("Name").equals("Sam")
+    assert line0["Name"] == "Sam"
 
     line2 = json.loads(lines[2])
-    line2.should.have.key("City").equals("Seattle")
+    assert line2["City"] == "Seattle"
