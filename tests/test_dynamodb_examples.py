@@ -69,3 +69,23 @@ def test_multiple_where_clauses():
     query = "SELECT * from table WHERE k2 = 'v2' and body = 'some text'"
     result = DynamoDBStatementParser(source_data={"table": double_doc}).parse(query)
     assert result == [input_object1]
+
+
+def test_search_object_inside_a_list():
+    input_object3 = {"a1": [{"name": "lvyan"}], "a2": "b2"}
+    third_doc = json.dumps(input_object3)
+
+    # Search name in a list
+    query = "select * from table where a1[0].name = 'lvyan'"
+    result = DynamoDBStatementParser(source_data={"table": third_doc}).parse(query)
+    assert result == [{"a1": [{"name": "lvyan"}], "a2": "b2"}]
+
+    # Search name, but the where-clause is not a list
+    query = "select * from table where a2[0].name = 'lvyan'"
+    result = DynamoDBStatementParser(source_data={"table": third_doc}).parse(query)
+    assert result == []
+
+    # Search name, but the where-clause wants a list-item that does not exist
+    query = "select * from table where a1[5].name = 'lvyan'"
+    result = DynamoDBStatementParser(source_data={"table": third_doc}).parse(query)
+    assert result == []

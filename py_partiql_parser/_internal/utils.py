@@ -1,3 +1,5 @@
+import re
+
 from .case_insensitive_dict import CaseInsensitiveDict
 from .json_parser import MissingVariable, Variable
 from typing import Any, Dict, List, Tuple, Union
@@ -77,6 +79,21 @@ def find_nested_data_in_object(
 def find_value_in_document(keys: List[str], json_doc):
     if not is_dict(json_doc):
         return None
+    key_is_array = re.search(r"(.+)\[(\d+)\]$", keys[0])
+    if key_is_array:
+        key_name = key_is_array.group(1)
+        array_index = int(key_is_array.group(2))
+        try:
+            requested_list = json_doc.get(key_name, [])
+            assert isinstance(requested_list, list)
+            doc_one_layer_down = requested_list[array_index]
+        except IndexError:
+            # Array exists, but does not have enough values
+            doc_one_layer_down = {}
+        except AssertionError:
+            # Requested key is not an array - fail silently just like AWS does
+            doc_one_layer_down = {}
+        return find_value_in_document(keys[1:], doc_one_layer_down)
     if len(keys) == 1:
         return json_doc.get(keys[0])
     return find_value_in_document(keys[1:], json_doc.get(keys[0], {}))
