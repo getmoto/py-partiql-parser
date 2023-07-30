@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+0.3.6
+-----
+ -  Allow where-clauses for lists, such as `where a[1] = '..'`
+
 0.3.5
 -----
  - Packaging improvements: Include source-files in the release, and update the version nr
