@@ -1,0 +1,2 @@
+include py_partiql_parser/*
+include tests/*

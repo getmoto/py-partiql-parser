@@ -14,13 +14,6 @@ dependencies = []
 "Bug Tracker" = "https://github.com/getmoto/py-partiql-parser/issues"
 "ChangeLog" = "https://github.com/getmoto/py-partiql-parser/blob/main/CHANGELOG.md"
 
-[tool.setuptools]
-packages = [
-    "py_partiql_parser",
-    "py_partiql_parser._internal",
-    "tests"
-]
-
 [project.optional-dependencies]
 dev = [
     "black==22.6.0",
