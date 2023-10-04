@@ -77,7 +77,7 @@ def test_dict_containing_a_variable():
 def test_unusual_quotes():
     original = "[{’a’:1, ’b’:true}, {’a’:2, ’b’:null}, {’a’:3}]"
     assert JsonParser().parse(original) == [
-        {"a": 1, "b": Variable(True)},
+        {"a": 1, "b": True},
         {"a": 2, "b": Variable(None)},
         {"a": 3},
     ]
@@ -112,3 +112,14 @@ def test_parse_multiple_objects():
 )
 def test_list_and_string_are_siblings(source):
     assert JsonParser().parse(json.dumps(source)) == source
+
+
+def test_bool_parser():
+    assert JsonParser().parse(json.dumps({"sth": False})) == {"sth": False}
+
+
+def test_multiline_bool_parser():
+    obj1 = {"sth": False}
+    obj2 = {"k1": "v1"}
+    combined = json.dumps(obj1) + "\n" + json.dumps(obj2)
+    assert JsonParser().parse(combined) == [obj1, obj2]
