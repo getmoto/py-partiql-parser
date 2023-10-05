@@ -6,11 +6,19 @@ input_object2 = {
     "id": "msg2",
     "k2": "v2",
     "body": "other text",
+    "catchup": True,
+    "not_catchup": False,
+    "list_of_bools": [True, False],
+    "list_of_ints": [42, 7],
     "nested": {"item": "sth"},
+    "bool_at_end": True,
 }
+input_object3 = {"id": "msg3", "body": "irrelevant"}
 
 simple_doc = json.dumps(input_object1)
-double_doc = simple_doc + "\n" + json.dumps(input_object2)
+double_doc = (
+    simple_doc + "\n" + json.dumps(input_object2) + "\n" + json.dumps(input_object3)
+)
 
 
 def test_table_with_single_row():
@@ -47,7 +55,7 @@ def test_nested_where__no_results():
 def test_select_single_key():
     query = "select id from table"
     result = DynamoDBStatementParser(source_data={"table": double_doc}).parse(query)
-    assert result == [{"id": "msg1"}, {"id": "msg2"}]
+    assert result == [{"id": "msg1"}, {"id": "msg2"}, {"id": "msg3"}]
 
 
 def test_select_multiple_keys():
@@ -56,13 +64,18 @@ def test_select_multiple_keys():
     assert result == [
         {"id": "msg1", "body": "some text"},
         {"id": "msg2", "body": "other text"},
+        {"id": "msg3", "body": "irrelevant"},
     ]
 
 
 def test_select_missing_key():
     query = "select id, nested from table"
     result = DynamoDBStatementParser(source_data={"table": double_doc}).parse(query)
-    assert result == [{"id": "msg1"}, {"id": "msg2", "nested": {"item": "sth"}}]
+    assert result == [
+        {"id": "msg1"},
+        {"id": "msg2", "nested": {"item": "sth"}},
+        {"id": "msg3"},
+    ]
 
 
 def test_multiple_where_clauses():

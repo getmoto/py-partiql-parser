@@ -94,21 +94,25 @@ class JsonParser:
                 current_phrase = ""
             elif c in ["}"] and section in ["VAR_VALUE", "INT_VALUE"]:
                 # End of a variable/number
-                result[dict_key] = (
-                    int(current_phrase)
-                    if section == "INT_VALUE"
-                    else Variable(current_phrase)
-                )
+                if section == "INT_VALUE":
+                    result[dict_key] = int(current_phrase)
+                elif current_phrase.lower() in ["true", "false"]:
+                    result[dict_key] = current_phrase.lower() == "true"
+                else:
+                    result[dict_key] = Variable(current_phrase)
                 section = None
                 current_phrase = ""
-                if c == "}" and only_parse_initial:
+                if only_parse_initial:
                     break
+                else:
+                    tokenizer.revert()
             elif c in [","] and section in ["VAR_VALUE", "INT_VALUE"]:
-                result[dict_key] = (
-                    int(current_phrase)
-                    if section == "INT_VALUE"
-                    else Variable(current_phrase)
-                )
+                if section == "INT_VALUE":
+                    result[dict_key] = int(current_phrase)
+                elif current_phrase.lower() in ["true", "false"]:
+                    result[dict_key] = current_phrase.lower() == "true"
+                else:
+                    result[dict_key] = Variable(current_phrase)
                 tokenizer.revert()
                 section = None
                 current_phrase = ""
@@ -166,13 +170,6 @@ class JsonParser:
                     break
                 tokenizer.skip_until([","])
                 tokenizer.skip_white_space()
-            elif c.isnumeric() and section is None:
-                result.append(int(c + tokenizer.next_until([",", "]"])))
-                current_phrase = ""
-                section = None
-                # Skip the comma, and any whitespace
-                tokenizer.next()
-                tokenizer.skip_white_space()
             elif c in ACCEPTED_QUOTES and section is None:
                 section = "VALUE"
             elif c in ACCEPTED_QUOTES and section == "VALUE":
@@ -182,10 +179,20 @@ class JsonParser:
             elif c == "]" and not section:
                 return result
             elif c == "]" and section == "VAR_VALUE":
-                result.append(Variable(current_phrase))
+                if current_phrase.isnumeric():
+                    result.append(int(current_phrase))
+                elif current_phrase.lower() in ["true", "false"]:
+                    result.append(current_phrase.lower() == "true")
+                else:
+                    result.append(Variable(current_phrase))
                 return result
             elif c == "," and section == "VAR_VALUE":
-                result.append(Variable(current_phrase))
+                if current_phrase.isnumeric():
+                    result.append(int(current_phrase))
+                elif current_phrase.lower() in ["true", "false"]:
+                    result.append(current_phrase.lower() == "true")
+                else:
+                    result.append(Variable(current_phrase))
                 current_phrase = ""
                 section = None
                 tokenizer.skip_white_space()
