@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+0.3.8
+-----
+ - Support JSON documents containing (lists of) BOOLeans
+
 0.3.6
 -----
  -  Allow where-clauses for lists, such as `where a[1] = '..'`
