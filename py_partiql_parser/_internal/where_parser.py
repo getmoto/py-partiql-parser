@@ -2,6 +2,12 @@ from typing import Any, List, Optional, Tuple
 
 from .clause_tokenizer import ClauseTokenizer
 from .utils import find_value_in_document
+from .utils import find_value_in_dynamodb_document
+from .._packages.boto3.types import TypeDeserializer, TypeSerializer
+
+
+deserializer = TypeDeserializer()
+serializer = TypeSerializer()
 
 
 class WhereParser:
@@ -75,7 +81,10 @@ class DynamoDBWhereParser(WhereParser):
         _filters = WhereParser.parse_where_clause(where_clause)
 
         _filters = [
-            (key, parameters.pop(0) if value == "?" else value)
+            (
+                key,
+                deserializer.deserialize(parameters.pop(0)) if value == "?" else value,
+            )
             for key, value in _filters
         ]
 
@@ -84,7 +93,11 @@ class DynamoDBWhereParser(WhereParser):
     def filter_rows(self, _filters):
         def _filter(row) -> bool:
             return all(
-                [find_value_in_document(keys, row) == value for keys, value in _filters]
+                [
+                    find_value_in_dynamodb_document(keys, row)
+                    == serializer.serialize(value)
+                    for keys, value in _filters
+                ]
             )
 
         return [row for row in self.source_data if _filter(row)]

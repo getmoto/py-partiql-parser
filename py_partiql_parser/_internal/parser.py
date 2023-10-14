@@ -33,6 +33,7 @@ class Parser:
         # FROM
         from_parser = self.from_parser()
         from_clauses = from_parser.parse(clauses[2])
+
         source_data = from_parser.get_source_data(self.documents)
         if is_dict(source_data):
             source_data = [source_data]  # type: ignore
@@ -64,7 +65,21 @@ class S3SelectParser(Parser):
 
 
 class DynamoDBStatementParser(Parser):
-    def __init__(self, source_data: Dict[str, str]):
+    def __init__(self, source_data: Dict[str, List[Dict[str, Any]]]):
+        """
+        Source Data should be a list of DynamoDB documents, mapped to the table name
+        {
+          "table_name": [
+             {
+               "hash_key": "..",
+               "other_item": {"S": ".."},
+               ..
+             },
+             ..
+          ],
+          ..
+        }
+        """
         super().__init__(
             source_data,
             table_prefix=None,
