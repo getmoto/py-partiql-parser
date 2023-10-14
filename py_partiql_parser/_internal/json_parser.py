@@ -45,6 +45,11 @@ class MissingVariable(Variable):
 
 
 class JsonParser:
+    """
+    Input can be a multiple documents, separated by a new-line (\n) characters
+    So we can't use the builtin JSON parser
+    """
+
     def parse(self, original, tokenizer=None, only_parse_initial=False) -> Any:
         if not (original.startswith("{") or original.startswith("[")):
             # Doesn't look like JSON - let's return as a variable

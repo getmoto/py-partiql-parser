@@ -79,13 +79,6 @@ class TestFilter:
             _filters=[(filter_keys, filter_value)]
         ) == [{"Name": "Vinod", "city": "Los Angeles"}]
 
-    def test_without_prefix(self):
-        filter_keys = ["city"]
-        filter_value = "Los Angeles"
-        assert DynamoDBWhereParser(TestFilter.all_rows).filter_rows(
-            _filters=[(filter_keys, filter_value)]
-        ) == [{"Name": "Vinod", "city": "Los Angeles"}]
-
     def test_alias(self):
         filter_keys = ["city"]
         filter_value = "Los Angeles"
@@ -103,6 +96,15 @@ class TestFilter:
 
 class TestDynamoDBParse:
     def test_parameters(self):
-        parser = DynamoDBWhereParser(source_data=TestFilter.all_rows)
-        resp = parser.parse("notes = ?", parameters=[{"extra": "n"}])
-        assert resp == [{"Name": "Kate", "city": "Chicago", "notes": {"extra": "n"}}]
+        data = [
+            {
+                "id": {"S": "msg1"},
+                "k2": {"S": "v2"},
+                "body": {"M": {"data": {"S": "some text"}}},
+            }
+        ]
+        parser = DynamoDBWhereParser(source_data=data)
+        resp = parser.parse(
+            "body = ?", parameters=[{"M": {"data": {"S": "some text"}}}]
+        )
+        assert resp == data

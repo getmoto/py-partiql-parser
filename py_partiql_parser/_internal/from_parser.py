@@ -1,8 +1,10 @@
-from typing import Dict, Any
+from typing import Any, Dict, List
 
 from .clause_tokenizer import ClauseTokenizer
 from .json_parser import JsonParser
 from .utils import CaseInsensitiveDict
+
+from ..exceptions import ParserException
 
 
 class FromParser:
@@ -92,6 +94,7 @@ class S3FromParser(FromParser):
         ].endswith("]")
 
         source_data = JsonParser().parse(documents[from_query])
+
         if doc_is_list:
             return {"_1": source_data}
         elif from_alias:
@@ -153,6 +156,20 @@ class S3FromParser(FromParser):
 
 
 class DynamoDBFromParser(FromParser):
-    def get_source_data(self, documents: Dict[str, str]):
-        source_data = documents[list(self.clauses.values())[0].lower()]
-        return JsonParser().parse(source_data)
+    def parse(self, from_clause) -> Dict[str, str]:
+        super().parse(from_clause)
+
+        for alias, table_name in list(self.clauses.items()):
+            if table_name[0].isnumeric():
+                raise ParserException(
+                    "ValidationException", "Aliasing is not supported"
+                )
+
+            if table_name[0] == '"' and table_name[-1] == '"':
+                self.clauses[alias] = table_name[1:-1]
+
+        return self.clauses
+
+    def get_source_data(self, documents: Dict[str, List[Dict[str, Any]]]):
+        list_of_json_docs = documents[list(self.clauses.values())[0].lower()]
+        return [CaseInsensitiveDict(doc) for doc in list_of_json_docs]

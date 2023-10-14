@@ -52,7 +52,7 @@ def find_nested_data_in_object(
                         )
                     )
             return result
-        elif isinstance(json_doc, CaseInsensitiveDict):
+        elif is_dict(json_doc):
             if current_key not in json_doc:
                 return MissingVariable()
             if remaining_keys:
@@ -97,6 +97,39 @@ def find_value_in_document(keys: List[str], json_doc):
     if len(keys) == 1:
         return json_doc.get(keys[0])
     return find_value_in_document(keys[1:], json_doc.get(keys[0], {}))
+
+
+def find_value_in_dynamodb_document(keys: List[str], json_doc):
+    if not is_dict(json_doc):
+        return None
+    key_is_array = re.search(r"(.+)\[(\d+)\]$", keys[0])
+    if key_is_array:
+        key_name = key_is_array.group(1)
+        array_index = int(key_is_array.group(2))
+        try:
+            requested_list = json_doc.get(key_name, {})
+            assert "L" in requested_list
+            doc_one_layer_down = requested_list["L"][array_index]
+            if "M" in doc_one_layer_down:
+                doc_one_layer_down = doc_one_layer_down["M"]
+        except IndexError:
+            # Array exists, but does not have enough values
+            doc_one_layer_down = {}
+        except AssertionError:
+            # Requested key is not a list - fail silently just like AWS does
+            doc_one_layer_down = {}
+        return find_value_in_dynamodb_document(keys[1:], doc_one_layer_down)
+    if len(keys) == 1:
+        if "M" in json_doc:
+            return json_doc["M"].get(keys[0])
+        else:
+            return json_doc.get(keys[0])
+    nested_doc = json_doc.get(keys[0], {})
+    if "M" in nested_doc:
+        return find_value_in_dynamodb_document(keys[1:], nested_doc["M"])
+    # Key is not a map
+    # Or does not exist
+    return None
 
 
 class QueryMetadata:

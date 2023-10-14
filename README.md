@@ -17,8 +17,7 @@ result = parser.parse("SELECT * FROM s3object")
 import json
 from py_partiql_parser import DynamoDBStatementParser
 
-original_json = json.dumps({"a1": "b1", "a2": "b2"})
-parser = DynamoDBStatementParser(source_data={"table1", original_json})
+parser = DynamoDBStatementParser(source_data={"table1": {"a1": {"S": "b1"}, "a2": {"S": "b2"}}})
 result = parser.parse("SELECT * from table1 WHERE a1 = ?", parameters=[{"S": "b1"}])
 ```
 
