@@ -1,6 +1,14 @@
 CHANGELOG
 =========
 
+0.4.0
+-----
+ - The DynamoDBStatementParser now expects a document in the DynamoDB format:
+{"a1": {"S": "b1"}, "a2": {"S": "b2"}}
+
+  - Adds validation for tables that start with a number
+  - Adds support for queries that have a table name surrounded by quotes
+
 0.3.8
 -----
  - Support JSON documents containing (lists of) BOOLeans
