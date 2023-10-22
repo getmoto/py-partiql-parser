@@ -101,4 +101,4 @@ class DynamoDBStatementParser(Parser):
         else:
             where = None
 
-        return QueryMetadata(tables=from_clauses, where_clauses=where)
+        return QueryMetadata(tables=from_clauses, where_clause=where)
