@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+0.4.1
+-----
+ - Increased support for WHERE-clauses:
+   1. Nested clauses
+   2. OR-clauses
+   3. Functions: attribute_type, IF (NOT) MISSING, comparison operators (<, >)
+
 0.4.0
 -----
  - The DynamoDBStatementParser now expects a document in the DynamoDB format:

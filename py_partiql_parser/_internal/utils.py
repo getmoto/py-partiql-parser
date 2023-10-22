@@ -2,7 +2,10 @@ import re
 
 from .case_insensitive_dict import CaseInsensitiveDict
 from .json_parser import MissingVariable, Variable
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .where_parser import AbstractWhereClause
 
 
 def is_dict(dct):
@@ -134,13 +137,17 @@ def find_value_in_dynamodb_document(keys: List[str], json_doc):
 
 class QueryMetadata:
     def __init__(
-        self, tables: Dict[str, str], where_clauses: List[Tuple[List[str], str]] = None
+        self,
+        tables: Dict[str, str],
+        where_clause: Optional["AbstractWhereClause"] = None,
     ):
         self._tables = tables
-        self._where_clauses = where_clauses or []
+        self._where_clause = where_clause
 
     def get_table_names(self) -> List[str]:
         return list(self._tables.values())
 
     def get_filter_names(self) -> List[str]:
-        return [".".join(keys) for keys, _ in self._where_clauses]
+        if self._where_clause:
+            return self._where_clause.get_filter_names()
+        return []
