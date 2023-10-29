@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+0.4.2
+-----
+ - Support for Python 3.12
+
 0.4.1
 -----
  - Increased support for WHERE-clauses:
