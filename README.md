@@ -1,3 +1,4 @@
+
 # py-partiql-parser
 A tokenizer/parser/executor for the PartiQL-language, in Python.
 
@@ -38,3 +39,10 @@ The first iteration of this library was based on the spec, found here: https://p
 AWS doesn't follow its own spec though, most notably:
  - a file containing a list (with multiple JSON documents) cannot be queried normally (`select *` returns everything, but you cannot `select key` for each document in the list)
  - `select values` is not supported
+
+
+## Security contact information
+
+To report a security vulnerability, please use the
+[Tidelift security contact](https://tidelift.com/security).
+Tidelift will coordinate the fix and disclosure.
