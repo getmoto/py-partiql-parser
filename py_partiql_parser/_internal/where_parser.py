@@ -1,9 +1,9 @@
 from decimal import Decimal
-from typing import Any, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from .clause_tokenizer import ClauseTokenizer
 from .utils import find_value_in_document
-from .utils import find_value_in_dynamodb_document
+from .utils import find_value_in_dynamodb_document, CaseInsensitiveDict
 from .._packages.boto3.types import TypeDeserializer, TypeSerializer
 
 
@@ -12,10 +12,10 @@ serializer = TypeSerializer()
 
 
 class AbstractWhereClause:
-    def __init__(self, left: Any):
-        self.children = [left]
+    def __init__(self) -> None:
+        self.children: List[AbstractWhereClause] = []
 
-    def apply(self, find_value, row) -> bool:
+    def apply(self, find_value: Any, row: Any) -> bool:
         return NotImplemented
 
     def get_filter_names(self) -> List[str]:
@@ -24,49 +24,51 @@ class AbstractWhereClause:
             all_names.extend(child.get_filter_names())
         return all_names
 
-    def process_value(self, fn) -> None:
+    def process_value(self, fn: Callable[[str], Dict[str, Any]]) -> None:
         """
         Transform all the values in this Where-clause, using a custom function
         """
         for child in self.children:
             child.process_value(fn)
 
-    def __eq__(self, other: Any):
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, AbstractWhereClause):
             return self.children == other.children
         return NotImplemented
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"<{type(self)} {self.children}>"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self)
 
 
 class WhereAndClause(AbstractWhereClause):
-    def __init__(self, left: "AbstractWhereClause"):
-        super().__init__(left)
+    def __init__(self, left: Optional["AbstractWhereClause"]):
+        super().__init__()
+        self.children.append(left)  # type: ignore[arg-type]
 
-    def apply(self, find_value, row) -> bool:
+    def apply(self, find_value: Callable[[str], Dict[str, Any]], row: Any) -> bool:
         return all([child.apply(find_value, row) for child in self.children])
 
 
 class WhereOrClause(AbstractWhereClause):
-    def __init__(self, left: "AbstractWhereClause"):
-        super().__init__(left)
+    def __init__(self, left: Optional["AbstractWhereClause"]):
+        super().__init__()
+        self.children.append(left)  # type: ignore[arg-type]
 
-    def apply(self, find_value, row) -> bool:
+    def apply(self, find_value: Any, row: Any) -> bool:
         return any([child.apply(find_value, row) for child in self.children])
 
 
 class WhereClause(AbstractWhereClause):
-    def __init__(self, fn: str, left: List[str], right: str):
-        super().__init__([])
+    def __init__(self, fn: str, left: List[str], right: Any):
+        super().__init__()
         self.fn = fn.lower()
         self.left = left
         self.right = right
 
-    def apply(self, find_value, row) -> bool:
+    def apply(self, find_value: Any, row: Any) -> bool:
         value = find_value(self.left, row)
         if self.fn == "contains":
             if "S" in self.right and "S" in value:
@@ -93,13 +95,13 @@ class WhereClause(AbstractWhereClause):
         # Default - should we error instead if fn != '=='?
         return value == self.right
 
-    def process_value(self, fn) -> None:
+    def process_value(self, fn: Callable[[str], Dict[str, Any]]) -> None:
         self.right = fn(self.right)
 
     def get_filter_names(self) -> List[str]:
         return [".".join(self.left)]
 
-    def __eq__(self, other: Any):
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, WhereClause):
             return (
                 self.fn == other.fn
@@ -108,15 +110,15 @@ class WhereClause(AbstractWhereClause):
             )
         return NotImplemented
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"<{type(self)} {self.fn}({self.left}, {self.right})>"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self)
 
 
 class WhereParser:
-    def __init__(self, source_data: Any):
+    def __init__(self, source_data: List[CaseInsensitiveDict]):
         self.source_data = source_data
 
     @classmethod
@@ -170,7 +172,7 @@ class WhereParser:
                 else:
                     # Finished processing a subsection of the WHERE-clause
                     # .. and (sub-clause) and ...
-                    return current_clause
+                    return current_clause  # type: ignore[return-value]
             if c == ".":
                 if section in ["KEY", "END_KEY"]:
                     if current_phrase != "":
@@ -275,29 +277,37 @@ class WhereParser:
                 section = "KEY"
             if section in ["KEY", "VALUE", "START_VALUE", "END_VALUE"]:
                 current_phrase += c
-        return current_clause
+        return current_clause  # type: ignore[return-value]
 
     @classmethod
-    def _determine_current_clause(cls, current_clause, left: str, fn: str, right: str):
+    def _determine_current_clause(
+        cls,
+        current_clause: Optional[AbstractWhereClause],
+        left: List[str],
+        fn: str,
+        right: str,
+    ) -> AbstractWhereClause:
         if current_clause is not None and isinstance(
             current_clause, (WhereAndClause, WhereOrClause)
         ):
             current_clause.children.append(
                 WhereClause(fn=fn, left=left.copy(), right=right)
             )
+            return current_clause
         else:
-            current_clause = WhereClause(fn=fn, left=left.copy(), right=right)
-        return current_clause
+            return WhereClause(fn=fn, left=left.copy(), right=right)
 
 
 class DynamoDBWhereParser(WhereParser):
-    def parse(self, _where_clause: str, parameters) -> Any:
+    def parse(
+        self, _where_clause: str, parameters: Optional[List[Dict[str, Any]]]
+    ) -> List[CaseInsensitiveDict]:
         where_clause = WhereParser.parse_where_clause(_where_clause)
 
-        def prep_value(val):
+        def prep_value(val: str) -> Dict[str, Any]:
             # WHERE key = ?
             #     ? should be parametrized
-            if val == "?":
+            if val == "?" and parameters:
                 return parameters.pop(0)
             # WHERE key = val
             #     'val' needs to be comparable with a DynamoDB document
@@ -315,7 +325,7 @@ class DynamoDBWhereParser(WhereParser):
 
 
 class S3WhereParser(WhereParser):
-    def parse(self, _where_clause: str, parameters=None) -> Any:
+    def parse(self, _where_clause: str) -> Any:
         # parameters argument is ignored - only relevant for DynamoDB
         where_clause = WhereParser.parse_where_clause(_where_clause)
 

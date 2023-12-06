@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from .clause_tokenizer import ClauseTokenizer
 from .json_parser import JsonParser
@@ -8,10 +8,7 @@ from ..exceptions import ParserException
 
 
 class FromParser:
-    def __init__(self):
-        self.clauses = None
-
-    def parse(self, from_clause) -> Dict[str, str]:
+    def __init__(self, from_clause: str):
         """
         Parse a FROM-clause in a PARTIQL query
         :param from_clause: a string of format `a AS b, x AS y` where `a` and `x` can contain commas
@@ -20,7 +17,7 @@ class FromParser:
         clauses: Dict[str, Any] = dict()
         section = None  # NAME/AS/ALIAS
         current_phrase = ""
-        name = alias = None
+        name = None
         from_clause_parser = ClauseTokenizer(from_clause)
         while True:
             c = from_clause_parser.next()
@@ -41,7 +38,6 @@ class FromParser:
                     current_phrase = ""
                     section = "AS"
                 elif section == "ALIAS":
-                    alias = current_phrase  # noqa
                     current_phrase = ""
                     section = "NAME"
                 continue
@@ -76,11 +72,10 @@ class FromParser:
 
         # {alias: full_name_of_table_or_file}
         self.clauses = clauses
-        return clauses
 
 
 class S3FromParser(FromParser):
-    def get_source_data(self, documents: Dict[str, str]):
+    def get_source_data(self, documents: Dict[str, str]) -> Any:
         from_alias = list(self.clauses.keys())[0].lower()
         from_query = list(self.clauses.values())[0].lower()
         if "." in from_query:
@@ -105,7 +100,7 @@ class S3FromParser(FromParser):
         else:
             return source_data
 
-    def _get_nested_source_data(self, documents: Dict[str, str]):
+    def _get_nested_source_data(self, documents: Dict[str, Any]) -> Any:
         """
         Our FROM-clauses are nested, meaning we need to dig into the provided document to return the key that we need
            --> FROM s3object.name as name
@@ -122,14 +117,17 @@ class S3FromParser(FromParser):
             key_so_far.append(key)
             key_has_asterix = key.endswith("[*]") and key[0:-3] in source_data
             new_key = key[0:-3] if key_has_asterix else key
-            if iterate_over_docs and isinstance(source_data, list):
+            if iterate_over_docs and isinstance(source_data, list):  # type: ignore[unreachable]
                 # The previous key ended in [*]
                 # Iterate over all docs in the result, and only return the requested source key
-                if key_so_far == entire_key:
+                if key_so_far == entire_key:  # type: ignore[unreachable]
                     # If we have an alias, we have to use that instead of the original name
                     source_data = [{alias: doc.get(new_key, {})} for doc in source_data]
                 else:
-                    source_data = [doc.get_original(new_key, {}) for doc in source_data]
+                    source_data = [
+                        doc.get_original(new_key) or CaseInsensitiveDict({})
+                        for doc in source_data
+                    ]
             else:
                 # The previous key was a regular key
                 # Assume that the result consists of a singular JSON document
@@ -142,8 +140,8 @@ class S3FromParser(FromParser):
                         # AWS behaviour when the root-document is a list
                         source_data = {"_1": source_data}
                     elif key_so_far == entire_key:
-                        if isinstance(source_data, list):
-                            source_data = [{alias: doc} for doc in source_data]
+                        if isinstance(source_data, list):  # type: ignore[unreachable]
+                            source_data = [{alias: doc} for doc in source_data]  # type: ignore[unreachable]
                         else:
                             source_data = {alias: source_data}
                 else:
@@ -156,8 +154,8 @@ class S3FromParser(FromParser):
 
 
 class DynamoDBFromParser(FromParser):
-    def parse(self, from_clause) -> Dict[str, str]:
-        super().parse(from_clause)
+    def __init__(self, from_clause: str):
+        super().__init__(from_clause)
 
         for alias, table_name in list(self.clauses.items()):
             if table_name[0].isnumeric():
@@ -167,9 +165,3 @@ class DynamoDBFromParser(FromParser):
 
             if table_name[0] == '"' and table_name[-1] == '"':
                 self.clauses[alias] = table_name[1:-1]
-
-        return self.clauses
-
-    def get_source_data(self, documents: Dict[str, List[Dict[str, Any]]]):
-        list_of_json_docs = documents[list(self.clauses.values())[0].lower()]
-        return [CaseInsensitiveDict(doc) for doc in list_of_json_docs]

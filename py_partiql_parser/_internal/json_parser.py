@@ -1,47 +1,11 @@
 from json import JSONEncoder
-from typing import Dict, Any, List, Union
+from typing import Any, List, Optional
 
 from .clause_tokenizer import ClauseTokenizer
-from .case_insensitive_dict import CaseInsensitiveDict
+from .utils import CaseInsensitiveDict, Variable
 
 ACCEPTED_QUOTES = ["'", '"', "’"]
 NEW_LINE = "\n"
-
-
-class Variable:
-    def __init__(self, value: Any) -> None:
-        self.value = value
-        if value == "null":
-            self.value = None
-        elif isinstance(value, str) and value.lower() in ["true", "false"]:
-            self.value = bool(value)
-
-    def __repr__(self) -> str:
-        return f"<{self.value}>"
-
-    def __hash__(self) -> int:
-        return hash(self.value)
-
-    def __eq__(self, other) -> bool:
-        return other and isinstance(other, Variable) and self.value == other.value
-
-    def apply(self, value) -> Any:
-        if isinstance(value, dict):
-            split_value = (
-                self.value.split(".") if isinstance(self.value, str) else [self.value]
-            )
-            current_key = split_value[0]
-            if current_key not in value:
-                return MissingVariable()
-            remaining_keys = ".".join(split_value[1:])
-            return Variable(remaining_keys).apply(value[current_key])
-        else:
-            return value
-
-
-class MissingVariable(Variable):
-    def __init__(self) -> None:
-        super().__init__(value=None)
 
 
 class JsonParser:
@@ -50,14 +14,19 @@ class JsonParser:
     So we can't use the builtin JSON parser
     """
 
-    def parse(self, original, tokenizer=None, only_parse_initial=False) -> Any:
+    def parse(
+        self,
+        original: str,
+        tokenizer: Optional[ClauseTokenizer] = None,
+        only_parse_initial: bool = False,
+    ) -> Any:
         if not (original.startswith("{") or original.startswith("[")):
             # Doesn't look like JSON - let's return as a variable
             return original if original.isnumeric() else Variable(original)
-        section = None  # DICT_KEY | KEY_TO_VALUE | DICT_VAL | OBJECT_END
-        dict_key = None
+        section: Optional[str] = None  # DICT_KEY | KEY_TO_VALUE | DICT_VAL | OBJECT_END
+        dict_key = ""
         current_phrase = ""
-        result: Dict[Any, Any] = CaseInsensitiveDict()
+        result = CaseInsensitiveDict()
         tokenizer = tokenizer or ClauseTokenizer(original)
         while True:
             c = tokenizer.next()
@@ -160,8 +129,8 @@ class JsonParser:
 
         return result
 
-    def _parse_list(self, original, tokenizer) -> Any:
-        result: List[Union[Any, Dict]] = list()
+    def _parse_list(self, original: str, tokenizer: ClauseTokenizer) -> Any:
+        result: List[Any] = list()
         section = None
         current_phrase = ""
         while True:
@@ -212,7 +181,7 @@ class JsonParser:
 
 
 class SelectEncoder(JSONEncoder):
-    def default(self, o):
+    def default(self, o: Any) -> Any:
         if isinstance(o, Variable) and o.value is None:
             return None
         if isinstance(o, CaseInsensitiveDict):

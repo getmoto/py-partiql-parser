@@ -1,7 +1,12 @@
 from typing import Dict, Any, List, Optional
 
 from .clause_tokenizer import ClauseTokenizer
-from .utils import find_nested_data_in_object, MissingVariable, is_dict
+from .utils import (
+    find_nested_data_in_object,
+    MissingVariable,
+    is_dict,
+    CaseInsensitiveDict,
+)
 
 
 class SelectClause:
@@ -9,7 +14,7 @@ class SelectClause:
         self.table_prefix = table_prefix
         self.value = value.strip()
 
-    def select(self, document: Dict[str, Any]):
+    def select(self, document: CaseInsensitiveDict) -> Any:
         if self.value == "*":
             if self.table_prefix and self.table_prefix in document:
                 return document[self.table_prefix]
@@ -30,10 +35,10 @@ class SelectClause:
             else:
                 return {self.value: document[self.value]}
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<SelectClause({self.value})>"
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return isinstance(other, SelectClause) and other.value == self.value
 
 
@@ -42,13 +47,15 @@ class FunctionClause(SelectClause):
         super().__init__(value)
         self.function_name = function_name.strip()
 
-    def execute(self, aliases: Dict[str, str], documents: List[Dict[str, Any]]):
+    def execute(
+        self, aliases: Dict[str, str], documents: List[CaseInsensitiveDict]
+    ) -> Dict[str, int]:
         return {"_1": len(documents)}
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<FunctionClause({self.function_name}({self.value}))>"
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, FunctionClause)
             and other.value == self.value
@@ -64,7 +71,7 @@ class SelectParser:
         self,
         select_clause: str,
         aliases: Dict[str, Any],
-        documents: List[Dict[str, Any]],
+        documents: List[CaseInsensitiveDict],
     ) -> List[Dict[str, Any]]:
         clauses = SelectParser.parse_clauses(select_clause, prefix=self.table_prefix)
 

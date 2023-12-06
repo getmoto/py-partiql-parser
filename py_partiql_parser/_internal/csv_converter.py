@@ -2,7 +2,7 @@ import json
 from typing import List
 
 
-def csv_to_json(input: str, headers_included=False) -> str:
+def csv_to_json(input: str, headers_included: bool = False) -> str:
     output = ""
     headers: List[str] = []
     for line in input.split("\n"):

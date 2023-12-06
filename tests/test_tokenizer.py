@@ -1,18 +1,18 @@
 from py_partiql_parser._internal.clause_tokenizer import ClauseTokenizer
 
 
-def test_immediate_overrun():
+def test_immediate_overrun() -> None:
     assert ClauseTokenizer("").next() is None
 
 
-def test_overrun():
+def test_overrun() -> None:
     tokenizer = ClauseTokenizer("ab")
     assert tokenizer.next() == "a"
     assert tokenizer.next() == "b"
     assert tokenizer.next() is None
 
 
-def test_current():
+def test_current() -> None:
     tokenizer = ClauseTokenizer("ab")
     assert tokenizer.current() == "a"
     assert tokenizer.current() == "a"
@@ -22,7 +22,7 @@ def test_current():
     assert tokenizer.current() is None
 
 
-def test_peek():
+def test_peek() -> None:
     tokenizer = ClauseTokenizer("abc")
     assert tokenizer.peek() == "b"
     tokenizer.next()
@@ -31,7 +31,7 @@ def test_peek():
     assert tokenizer.peek() is None
 
 
-def test_next_until():
+def test_next_until() -> None:
     tokenizer = ClauseTokenizer("sth (relevant data) else")
     while tokenizer.next() != "(":
         pass

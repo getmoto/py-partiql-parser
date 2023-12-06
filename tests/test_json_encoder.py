@@ -3,7 +3,7 @@ from . import input_with_lists
 from py_partiql_parser import S3SelectParser, SelectEncoder
 
 
-def test_json_output_can_be_dumped():
+def test_json_output_can_be_dumped() -> None:
     query = "select * from s3object s"
     input_with_none = json.dumps(
         {
@@ -17,7 +17,7 @@ def test_json_output_can_be_dumped():
     assert f"[{input_with_none}]" == json.dumps(result, cls=SelectEncoder)
 
 
-def test_json_with_lists_can_be_dumped():
+def test_json_with_lists_can_be_dumped() -> None:
     query = "select * from s3object s"
     input_with_none = json.dumps(input_with_lists[0])
     result = S3SelectParser(source_data={"s3object": input_with_none}).parse(query)

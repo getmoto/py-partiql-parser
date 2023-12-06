@@ -1,19 +1,23 @@
 import re
+import sys
+from collections import OrderedDict
+from typing import Any, Dict, List, Iterator, Optional, Tuple, Union, TYPE_CHECKING
 
-from .case_insensitive_dict import CaseInsensitiveDict
-from .json_parser import MissingVariable, Variable
-from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
+if sys.version_info[:2] > (3, 8):
+    from collections.abc import Mapping, MutableMapping
+else:
+    from typing import Mapping, MutableMapping
 
 if TYPE_CHECKING:
     from .where_parser import AbstractWhereClause
 
 
-def is_dict(dct):
+def is_dict(dct: Any) -> bool:
     return isinstance(dct, dict) or isinstance(dct, CaseInsensitiveDict)
 
 
 def find_nested_data(
-    select_clause: str, data_source: List[Dict[str, Any]]
+    select_clause: str, data_source: List["CaseInsensitiveDict"]
 ) -> List[Dict[str, Any]]:
     """
     Iterate over a list of JSON objects, and return only the keys specified
@@ -32,54 +36,36 @@ def find_nested_data(
 
 
 def find_nested_data_in_object(
-    select_clause: Union[None, str, Variable], json_doc: Any
+    select_clause: str, json_doc: Union[str, "CaseInsensitiveDict"]
 ) -> Any:
-    if isinstance(select_clause, str):
-        if select_clause == "*":
-            return json_doc
-        select_clause = Variable(select_clause)
-    if isinstance(select_clause, Variable):
-        if not select_clause.value:
-            return json_doc
-        current_key = select_clause.value.split(".")[0]
-        remaining_keys = ".".join(select_clause.value.split(".")[1:])
-        if isinstance(json_doc, list):
-            result = []
-            for row in json_doc:
-                if current_key not in row:
-                    result.append(MissingVariable())
-                else:
-                    result.append(
-                        find_nested_data_in_object(
-                            row[current_key], Variable(remaining_keys)
-                        )
+    if select_clause == "*":
+        return json_doc
+
+    current_key = select_clause.split(".")[0]
+    remaining_keys = ".".join(select_clause.split(".")[1:])
+    if isinstance(json_doc, list):  # type: ignore[unreachable]
+        result = []  # type: ignore[unreachable]
+        for row in json_doc:
+            if current_key not in row:
+                result.append(MissingVariable())
+            else:
+                result.append(
+                    find_nested_data_in_object(
+                        json_doc=row[current_key], select_clause=remaining_keys
                     )
-            return result
-        elif is_dict(json_doc):
-            if current_key not in json_doc:
-                return MissingVariable()
-            if remaining_keys:
-                return find_nested_data_in_object(
-                    json_doc[current_key], Variable(remaining_keys)
                 )
-            return json_doc.get_original(current_key)
-    if isinstance(select_clause, CaseInsensitiveDict):
-        result = [
-            {k: v.apply(row) for k, v in select_clause.items()} for row in json_doc
-        ]
-        return [
-            {k: v for k, v in row.items() if not isinstance(v, MissingVariable)}
-            for row in result
-        ]
-    if isinstance(select_clause, list):
-        return [
-            [find_nested_data_in_object(data_row, x) for x in select_clause]
-            for data_row in json_doc
-        ]
-    return []
+        return result
+    elif is_dict(json_doc):
+        if current_key not in json_doc:
+            return MissingVariable()
+        if remaining_keys:
+            return find_nested_data_in_object(
+                json_doc=json_doc[current_key], select_clause=remaining_keys  # type: ignore[index]
+            )
+        return json_doc.get_original(current_key)  # type: ignore[union-attr]
 
 
-def find_value_in_document(keys: List[str], json_doc):
+def find_value_in_document(keys: List[str], json_doc: Any) -> Any:
     if not is_dict(json_doc):
         return None
     key_is_array = re.search(r"(.+)\[(\d+)\]$", keys[0])
@@ -102,7 +88,7 @@ def find_value_in_document(keys: List[str], json_doc):
     return find_value_in_document(keys[1:], json_doc.get(keys[0], {}))
 
 
-def find_value_in_dynamodb_document(keys: List[str], json_doc):
+def find_value_in_dynamodb_document(keys: List[str], json_doc: Any) -> Any:
     if not is_dict(json_doc):
         return None
     key_is_array = re.search(r"(.+)\[(\d+)\]$", keys[0])
@@ -151,3 +137,96 @@ class QueryMetadata:
         if self._where_clause:
             return self._where_clause.get_filter_names()
         return []
+
+
+class Variable:
+    def __init__(self, value: Any) -> None:
+        self.value = value
+        if value == "null":
+            self.value = None
+        elif isinstance(value, str) and value.lower() in ["true", "false"]:
+            self.value = bool(value)
+
+    def __repr__(self) -> str:
+        return f"<{self.value}>"
+
+    def __hash__(self) -> int:
+        return hash(self.value)
+
+    def __eq__(self, other: Any) -> bool:
+        return other and isinstance(other, Variable) and self.value == other.value
+
+    def apply(self, value: Any) -> Any:
+        if isinstance(value, dict):
+            split_value = (
+                self.value.split(".") if isinstance(self.value, str) else [self.value]
+            )
+            current_key = split_value[0]
+            if current_key not in value:
+                return MissingVariable()
+            remaining_keys = ".".join(split_value[1:])
+            return Variable(remaining_keys).apply(value[current_key])
+        else:
+            return value
+
+
+class MissingVariable(Variable):
+    def __init__(self) -> None:
+        super().__init__(value=None)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, MissingVariable)
+
+
+class CaseInsensitiveDict(MutableMapping[str, Any]):
+    # Taken from https://raw.githubusercontent.com/kennethreitz/requests/v2.25.1/requests/structures.py
+
+    def __init__(self, data: Optional[Mapping[str, Any]] = None):
+        self._store: Dict[str, Any] = OrderedDict()
+        if data:
+            self.update(
+                {
+                    key: CaseInsensitiveDict(val) if is_dict(val) else val
+                    for key, val in data.items()
+                }
+            )
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        # Use the lowercased key for lookups, but store the actual
+        # key alongside the value.
+        self._store[key.lower()] = (key, value)
+
+    def __getitem__(self, key: str) -> Any:
+        return self._store[key.lower()][1]
+
+    def __delitem__(self, key: str) -> None:
+        del self._store[key.lower()]
+
+    def __iter__(self) -> Iterator[str]:
+        return (casedkey for casedkey, mappedvalue in self._store.values())
+
+    def __len__(self) -> int:
+        return len(self._store)
+
+    def lower_items(self) -> Iterator[Tuple[str, Any]]:
+        """Like iteritems(), but with all lowercase keys."""
+        return ((lowerkey, keyval[1]) for (lowerkey, keyval) in self._store.items())
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, Mapping):
+            other = CaseInsensitiveDict(other)
+        else:
+            return NotImplemented
+        # Compare insensitively
+        return dict(self.lower_items()) == dict(other.lower_items())
+
+    def get_original(self, key: str) -> "CaseInsensitiveDict":
+        original_key, original_value = self._store[key.lower()]
+        return CaseInsensitiveDict({original_key: original_value})
+
+    # Copy is required
+    def copy(self) -> "CaseInsensitiveDict":
+        return CaseInsensitiveDict(self._store.values())  # type: ignore[arg-type]
+
+    def __repr__(self) -> str:
+        return str(dict(self.items()))

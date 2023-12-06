@@ -18,7 +18,7 @@ input_with_header = (
 )
 
 
-def test_csv_to_json():
+def test_csv_to_json() -> None:
     result = csv_to_json(input_csv)
     lines = result.split("\n")
     assert len(lines) == 7
@@ -27,7 +27,7 @@ def test_csv_to_json():
     assert line0["_1"] == "Sam"
 
 
-def test_csv_to_json_with_headers():
+def test_csv_to_json_with_headers() -> None:
     result = csv_to_json(input_with_header, headers_included=True)
     lines = result.split("\n")
     assert len(lines) == 7

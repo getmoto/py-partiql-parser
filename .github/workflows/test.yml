@@ -27,6 +27,7 @@ jobs:
       run: |
         black --check .
         flake8 py_partiql_parser/
+        mypy
 
   test:
     name: Unit test

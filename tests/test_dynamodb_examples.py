@@ -1,4 +1,6 @@
 import pytest
+from typing import Any, Dict, List
+
 from py_partiql_parser import DynamoDBStatementParser
 from py_partiql_parser.exceptions import ParserException
 from py_partiql_parser._packages.boto3.types import TypeSerializer, TypeDeserializer
@@ -7,8 +9,12 @@ serializer = TypeSerializer()
 deserializer = TypeDeserializer()
 
 
-input_object1 = {"id": {"S": "msg1"}, "k2": {"S": "v2"}, "body": {"S": "some text"}}
-input_object2 = {
+input_object1: Dict[str, Any] = {
+    "id": {"S": "msg1"},
+    "k2": {"S": "v2"},
+    "body": {"S": "some text"},
+}
+input_object2: Dict[str, Any] = {
     "id": {"S": "msg2"},
     "k2": {"S": "v2"},
     "body": {"S": "other text"},
@@ -19,44 +25,38 @@ input_object2 = {
     "nested": {"M": {"item": {"S": "sth"}}},
     "bool_at_end": {"BOOL": False},
 }
-input_object3 = {"id": {"S": "msg3"}, "body": {"S": "irrelevant"}}
+input_object3: Dict[str, Any] = {"id": {"S": "msg3"}, "body": {"S": "irrelevant"}}
 
 simple_doc = [input_object1]
 double_doc = [input_object1, input_object2, input_object3]
 
 
-def test_table_with_single_row():
+def test_table_with_single_row() -> None:
     query = "select * from msgs"
     assert DynamoDBStatementParser(source_data={"msgs": simple_doc}).parse(query) == [
         input_object1
     ]
 
 
-def test_table_with_multiple_rows():
+def test_table_with_multiple_rows() -> None:
     query = "select * from msgs where body = 'other text'"
-    assert DynamoDBStatementParser(source_data={"msgs": double_doc}).parse(
-        query, parameters=[]
-    ) == [input_object2]
+    parser = DynamoDBStatementParser(source_data={"msgs": double_doc})
+    assert parser.parse(query) == [input_object2]
 
 
-def test_nested_where():
+def test_nested_where() -> None:
     query = "select * from table where nested.item = 'sth'"
-    assert DynamoDBStatementParser(source_data={"table": double_doc}).parse(
-        query, parameters=[]
-    ) == [input_object2]
+    parser = DynamoDBStatementParser(source_data={"table": double_doc})
+    assert parser.parse(query) == [input_object2]
 
 
-def test_nested_where__no_results():
+def test_nested_where__no_results() -> None:
     query = "select * from table where nested.item = 'other'"
-    assert (
-        DynamoDBStatementParser(source_data={"table": double_doc}).parse(
-            query, parameters=[]
-        )
-        == []
-    )
+    parser = DynamoDBStatementParser(source_data={"table": double_doc})
+    assert parser.parse(query) == []
 
 
-def test_select_single_key():
+def test_select_single_key() -> None:
     query = "select id from table"
     result = DynamoDBStatementParser(source_data={"table": double_doc}).parse(query)
     assert result == [
@@ -66,7 +66,7 @@ def test_select_single_key():
     ]
 
 
-def test_select_multiple_keys():
+def test_select_multiple_keys() -> None:
     query = "select id, body from table"
     result = DynamoDBStatementParser(source_data={"table": double_doc}).parse(query)
     assert result == [
@@ -76,7 +76,7 @@ def test_select_multiple_keys():
     ]
 
 
-def test_select_missing_key():
+def test_select_missing_key() -> None:
     query = "select id, nested from table"
     result = DynamoDBStatementParser(source_data={"table": double_doc}).parse(query)
     assert result == [
@@ -86,13 +86,13 @@ def test_select_missing_key():
     ]
 
 
-def test_multiple_where_clauses():
+def test_multiple_where_clauses() -> None:
     query = "SELECT * from table WHERE k2 = 'v2' and body = 'some text'"
     result = DynamoDBStatementParser(source_data={"table": double_doc}).parse(query)
     assert result == [input_object1]
 
 
-def test_search_object_inside_a_list():
+def test_search_object_inside_a_list() -> None:
     # TODO: try sets as well
     # StringSets, NumberSets, BinarySets
 
@@ -132,7 +132,7 @@ def test_search_object_inside_a_list():
     assert result == []
 
 
-def test_table_starting_with_number():
+def test_table_starting_with_number() -> None:
     query = "SELECT * from 0table"
     with pytest.raises(ParserException) as exc:
         DynamoDBStatementParser(source_data={"table": double_doc}).parse(query)
@@ -146,8 +146,8 @@ def test_table_starting_with_number():
     )
 
 
-def test_complex_where_clauses():
-    items = [
+def test_complex_where_clauses() -> None:
+    items: List[Dict[str, Any]] = [
         {
             "Id": {
                 "S": "0",

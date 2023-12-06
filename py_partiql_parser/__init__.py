@@ -2,6 +2,6 @@ __version__ = "0.4.2"
 
 
 from ._internal.parser import DynamoDBStatementParser, S3SelectParser  # noqa
-from ._internal.json_parser import MissingVariable, SelectEncoder  # noqa
+from ._internal.json_parser import SelectEncoder  # noqa
 from ._internal.csv_converter import csv_to_json  # noqa
-from ._internal.utils import QueryMetadata  # noqa
+from ._internal.utils import MissingVariable, QueryMetadata  # noqa

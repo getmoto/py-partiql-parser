@@ -1,43 +1,42 @@
 from py_partiql_parser._internal.parser import FromParser
-from py_partiql_parser._internal.json_parser import Variable
 
 
-def test_split__single_source():
-    result = FromParser().parse("x")
-    assert result == {"x": "x"}
+def test_split__single_source() -> None:
+    parser = FromParser("x")
+    assert parser.clauses == {"x": "x"}
 
 
-def test_split__multiple_sources():
-    result = FromParser().parse("x,y")
-    assert result == {"x": "x", "y": "y"}
+def test_split__multiple_sources() -> None:
+    parser = FromParser("x,y")
+    assert parser.clauses == {"x": "x", "y": "y"}
 
 
-def test_split__multiple_sources_with_aliases():
-    result = FromParser().parse("x, y AS z")
-    assert result == {"x": "x", "z": "y"}
+def test_split__multiple_sources_with_aliases() -> None:
+    parser = FromParser("x, y AS z")
+    assert parser.clauses == {"x": "x", "z": "y"}
 
-    result = FromParser().parse("x AS y,z")
-    assert result == {"y": "x", "z": "z"}
+    parser = FromParser("x AS y,z")
+    assert parser.clauses == {"y": "x", "z": "z"}
 
-    result = FromParser().parse("a AS b, x AS y")
-    assert result == {"b": "a", "y": "x"}
-
-
-def test_split__single_source_with_alias():
-    result = FromParser().parse("x AS y")
-    assert result == {"y": "x"}
+    parser = FromParser("a AS b, x AS y")
+    assert parser.clauses == {"b": "a", "y": "x"}
 
 
-def test_split__clauses_with_arrays():
-    result = FromParser().parse("[1, 2, 3] AS y")
-    assert result == {"y": "[1, 2, 3]"}
-
-    result = FromParser().parse("a AS b, [1, 2, 3] AS y")
-    assert result == {"b": "a", "y": "[1, 2, 3]"}
+def test_split__single_source_with_alias() -> None:
+    parser = FromParser("x AS y")
+    assert parser.clauses == {"y": "x"}
 
 
-def test_multiple_rows():
+def test_split__clauses_with_arrays() -> None:
+    parser = FromParser("[1, 2, 3] AS y")
+    assert parser.clauses == {"y": "[1, 2, 3]"}
+
+    parser = FromParser("a AS b, [1, 2, 3] AS y")
+    assert parser.clauses == {"b": "a", "y": "[1, 2, 3]"}
+
+
+def test_multiple_rows() -> None:
     clause = """[{'a':'legit', 'b':1}, {'a':400, 'b':2}] AS v"""
     expected = {"v": "[{'a':'legit', 'b':1}, {'a':400, 'b':2}]"}
-    result = FromParser().parse(clause)
-    assert result == expected
+    parser = FromParser(clause)
+    assert parser.clauses == expected

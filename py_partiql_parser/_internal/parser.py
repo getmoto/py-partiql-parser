@@ -1,11 +1,11 @@
 import re
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from .from_parser import DynamoDBFromParser, S3FromParser, FromParser
 from .select_parser import SelectParser
 from .where_parser import DynamoDBWhereParser, S3WhereParser, WhereParser
-from .utils import is_dict, QueryMetadata
+from .utils import is_dict, QueryMetadata, CaseInsensitiveDict
 
 
 class S3SelectParser:
@@ -15,32 +15,31 @@ class S3SelectParser:
         self.documents = source_data
         self.table_prefix = "s3object"
 
-    def parse(self, query: str, parameters=None) -> List[Dict[str, Any]]:
+    def parse(self, query: str) -> List[Dict[str, Any]]:
         query = query.replace("\n", " ")
         clauses = re.split("SELECT | FROM | WHERE ", query, flags=re.IGNORECASE)
         # First clause is whatever comes in front of SELECT - which should be nothing
         _ = clauses[0]
         # FROM
-        from_parser = S3FromParser()
-        from_clauses = from_parser.parse(clauses[2])
+        from_parser = S3FromParser(from_clause=clauses[2])
 
         source_data = from_parser.get_source_data(self.documents)
         if is_dict(source_data):
-            source_data = [source_data]  # type: ignore
+            source_data = [source_data]
 
         # WHERE
         if len(clauses) > 3:
             where_clause = clauses[3]
-            source_data = S3WhereParser(source_data).parse(where_clause, parameters)
+            source_data = S3WhereParser(source_data).parse(where_clause)
 
         # SELECT
         select_clause = clauses[1]
         table_prefix = self.table_prefix
-        for alias_key, alias_value in from_clauses.items():
+        for alias_key, alias_value in from_parser.clauses.items():
             if table_prefix == alias_value:
                 table_prefix = alias_key
         return SelectParser(table_prefix).parse(
-            select_clause, from_clauses, source_data
+            select_clause, from_parser.clauses, source_data
         )
 
 
@@ -62,18 +61,22 @@ class DynamoDBStatementParser:
         """
         # Source data is in the format: {source: json}
         # Where 'json' is one or more json documents separated by a newline
-        self.documents = source_data
+        self.documents = {
+            key: [CaseInsensitiveDict(v) for v in val]
+            for key, val in source_data.items()
+        }
 
-    def parse(self, query: str, parameters=None) -> List[Dict[str, Any]]:
+    def parse(
+        self, query: str, parameters: Optional[List[Dict[str, Any]]] = None
+    ) -> List[Dict[str, Any]]:
         query = query.replace("\n", " ")
         clauses = re.split("SELECT | FROM | WHERE ", query, flags=re.IGNORECASE)
         # First clause is whatever comes in front of SELECT - which should be nothing
         _ = clauses[0]
         # FROM
-        from_parser = DynamoDBFromParser()
-        from_clauses = from_parser.parse(clauses[2])
+        from_parser = DynamoDBFromParser(from_clause=clauses[2])
 
-        source_data = from_parser.get_source_data(self.documents)
+        source_data = self.documents[list(from_parser.clauses.values())[0].lower()]
 
         # WHERE
         if len(clauses) > 3:
@@ -84,14 +87,14 @@ class DynamoDBStatementParser:
 
         # SELECT
         select_clause = clauses[1]
-        return SelectParser().parse(select_clause, from_clauses, source_data)
+        return SelectParser().parse(select_clause, from_parser.clauses, source_data)
 
     @classmethod
-    def get_query_metadata(cls, query: str):
+    def get_query_metadata(cls, query: str) -> QueryMetadata:
         query = query.replace("\n", " ")
         clauses = re.split("SELECT | FROM | WHERE ", query, flags=re.IGNORECASE)
 
-        from_clauses = FromParser().parse(clauses[2])
+        from_parser = FromParser(clauses[2])
 
         # WHERE
         if len(clauses) > 3:
@@ -100,4 +103,4 @@ class DynamoDBStatementParser:
         else:
             where = None
 
-        return QueryMetadata(tables=from_clauses, where_clause=where)
+        return QueryMetadata(tables=from_parser.clauses, where_clause=where)

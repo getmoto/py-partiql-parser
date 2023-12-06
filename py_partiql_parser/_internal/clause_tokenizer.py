@@ -1,12 +1,12 @@
-from typing import Optional, AnyStr, List
+from typing import Optional, List
 
 
 class ClauseTokenizer:
-    def __init__(self, from_clause) -> None:
+    def __init__(self, from_clause: str):
         self.token_list = from_clause
         self.token_pos = 0
 
-    def current(self):
+    def current(self) -> Optional[str]:
         """
         Returns the current char - or None
         """
@@ -15,7 +15,7 @@ class ClauseTokenizer:
         except IndexError:
             return None
 
-    def next(self) -> Optional[AnyStr]:
+    def next(self) -> Optional[str]:
         """
         Returns the next token - or None
         :return:
@@ -27,13 +27,13 @@ class ClauseTokenizer:
         except IndexError:
             return None
 
-    def peek(self):
+    def peek(self) -> Optional[str]:
         try:
             return self.token_list[self.token_pos + 1]
         except IndexError:
             return None
 
-    def revert(self):
+    def revert(self) -> None:
         self.token_pos -= 1
 
     def skip_white_space(self) -> None:

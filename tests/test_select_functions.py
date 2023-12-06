@@ -4,7 +4,7 @@ from . import json_as_lines
 
 
 class TestCount:
-    def setup_method(self):
+    def setup_method(self) -> None:
         self.parser = S3SelectParser(source_data={"s3object": json_as_lines})
 
     @pytest.mark.parametrize(
@@ -16,15 +16,15 @@ class TestCount:
             ["select count(*) from s3object where s3object.Name = 'Jane'", "_1", 1],
         ],
     )
-    def test_count(self, query, key, result):
+    def test_count(self, query: str, key: str, result: int) -> None:
         assert self.parser.parse(query) == [{key: result}]
 
-    @pytest.mark.xfail(message="Not yet implemented")
+    @pytest.mark.xfail(reason="Not yet implemented")
     @pytest.mark.parametrize(
         "query,key,result",
         [
             ["select count(*) as cnt from s3object", "cnt", 7],
         ],
     )
-    def test_count(self, query, key, result):
+    def test_count_failures(self, query: str, key: str, result: int) -> None:
         assert self.parser.parse(query) == [{key: result}]

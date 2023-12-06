@@ -20,7 +20,7 @@ input_json_object = {"a1": "b1", "a2": "b2"}
 
 
 @pytest.mark.xfail(reason="CSV functionality not yet implemented")
-def test_aws_sample__csv():
+def test_aws_sample__csv() -> None:
     query = "SELECT * FROM s3object s where s.\"Name\" = 'Jane'"
     x = S3SelectParser(source_data={"s3object": input_data_csv}).parse(query)
 
@@ -28,9 +28,9 @@ def test_aws_sample__csv():
 @pytest.mark.xfail(
     reason="this shouldn't work, as it doesn't work against AWS. Input should be a string where line is a document, not a list"
 )
-def test_aws_sample__json__search_by_name():
+def test_aws_sample__json__search_by_name() -> None:
     query = "SELECT * FROM s3object s where s.\"Name\" = 'Jane'"
-    result = S3SelectParser(source_data={"s3object": input_json_list}).parse(query)
+    result = S3SelectParser(source_data={"s3object": input_json_list}).parse(query)  # type: ignore
     assert result == [
         {
             "Name": "Jane",
@@ -48,7 +48,7 @@ def test_aws_sample__json__search_by_name():
         "SELECT * FROM s3object s where s.\"City\" = 'Chicago'",
     ],
 )
-def test_aws_sample__json__search_by_city(query):
+def test_aws_sample__json__search_by_city(query: str) -> None:
     result = S3SelectParser(source_data={"s3object": json_as_lines}).parse(query)
     assert len(result) == 4
     assert {
@@ -77,7 +77,7 @@ def test_aws_sample__json__search_by_city(query):
     } in result
 
 
-def test_aws_sample__json_select_multiple_attrs__search_by_city():
+def test_aws_sample__json_select_multiple_attrs__search_by_city() -> None:
     query = "SELECT s.name, s.city FROM s3object s where s.\"City\" = 'Chicago'"
     result = S3SelectParser(source_data={"s3object": json_as_lines}).parse(query)
     assert len(result) == 4
@@ -99,7 +99,7 @@ def test_aws_sample__json_select_multiple_attrs__search_by_city():
     } in result
 
 
-def test_aws_sample__object_select_all():
+def test_aws_sample__object_select_all() -> None:
     query = "SELECT * FROM s3object"
     result = S3SelectParser(
         source_data={"s3object": json.dumps(input_json_object)}
@@ -107,7 +107,7 @@ def test_aws_sample__object_select_all():
     assert result == [input_json_object]
 
 
-def test_aws_sample__s3object_is_case_insensitive():
+def test_aws_sample__s3object_is_case_insensitive() -> None:
     query = "SELECT * FROM s3obJEct"
     result = S3SelectParser(
         source_data={"s3object": json.dumps(input_json_object)}
@@ -115,7 +115,7 @@ def test_aws_sample__s3object_is_case_insensitive():
     assert result == [input_json_object]
 
 
-def test_aws_sample__object_select_everything():
+def test_aws_sample__object_select_everything() -> None:
     query = "SELECT s FROM s3object AS s"
     result = S3SelectParser(
         source_data={"s3object": json.dumps(input_json_object)}
@@ -123,7 +123,7 @@ def test_aws_sample__object_select_everything():
     assert result == [input_json_object]
 
 
-def test_aws_sample__object_select_attr():
+def test_aws_sample__object_select_attr() -> None:
     query = "SELECT s.a1 FROM s3object AS s"
     result = S3SelectParser(
         source_data={"s3object": json.dumps(input_json_object)}
@@ -131,7 +131,7 @@ def test_aws_sample__object_select_attr():
     assert result == [{"a1": "b1"}]
 
 
-def test_case_insensitivity():
+def test_case_insensitivity() -> None:
     # Filter by lower case "city"
     query = "SELECT * from s3object where s3object.city = 'Los Angeles'"
     # Data has upper case CITY
@@ -141,12 +141,10 @@ def test_case_insensitivity():
         + json.dumps({"Name": "Vinod", "City": "Los Angeles"})
     )
     parser = S3SelectParser(source_data={"s3object": all_rows})
-    assert parser.parse(query, parameters=None) == [
-        {"Name": "Vinod", "City": "Los Angeles"}
-    ]
+    assert parser.parse(query) == [{"Name": "Vinod", "City": "Los Angeles"}]
 
 
-def test_select_doc_using_asterisk():
+def test_select_doc_using_asterisk() -> None:
     query = "select * from s3object[*]"
     result = S3SelectParser(source_data={"s3object": json_as_lines}).parse(query)
     assert len(result) == 7
@@ -165,7 +163,7 @@ def test_select_doc_using_asterisk():
         "select my_n from s3object[*].Name as my_n",
     ],
 )
-def test_select_specific_object_doc_using_named_asterisk(query):
+def test_select_specific_object_doc_using_named_asterisk(query: str) -> None:
     result = S3SelectParser(source_data={"s3object": json_as_lines}).parse(query)
     assert len(result) == 7
     assert {"my_n": "Sam"} in result
@@ -176,14 +174,14 @@ def test_select_specific_object_doc_using_named_asterisk(query):
     "query",
     ["select * from s3object[*].Name my_n", "select * from s3object[*].Name as my_n"],
 )
-def test_select_nested_object_using_named_asterisk(query):
+def test_select_nested_object_using_named_asterisk(query: str) -> None:
     result = S3SelectParser(source_data={"s3object": json_as_lines}).parse(query)
     assert len(result) == 7
     assert {"_1": "Sam"} in result
     assert {"_1": "Jeff"} in result
 
 
-def test_select_list_using_asterisk():
+def test_select_list_using_asterisk() -> None:
     query = "select * from s3object[*] s"
     result = S3SelectParser(
         source_data={"s3object": json.dumps(input_with_lists)}
@@ -195,7 +193,7 @@ def test_select_list_using_asterisk():
     "query",
     ["select * from s3object[*].staff s", "select * from s3object[*].staff[*] s"],
 )
-def test_select_nested_list_using_asterisk(query):
+def test_select_nested_list_using_asterisk(query: str) -> None:
     result = S3SelectParser(
         source_data={"s3object": json.dumps(input_with_lists)}
     ).parse(query)
