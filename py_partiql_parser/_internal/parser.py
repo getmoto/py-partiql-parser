@@ -1,6 +1,6 @@
 import re
 
-from typing import Dict, Any, Union, List, AnyStr, Optional
+from typing import Dict, Any, List
 
 from .from_parser import DynamoDBFromParser, S3FromParser, FromParser
 from .select_parser import SelectParser
@@ -8,22 +8,12 @@ from .where_parser import DynamoDBWhereParser, S3WhereParser, WhereParser
 from .utils import is_dict, QueryMetadata
 
 
-class Parser:
-    RETURN_TYPE = Union[Dict[AnyStr, Any], List]
-
-    def __init__(
-        self,
-        source_data: Dict[str, str],
-        table_prefix: Optional[str],
-        from_parser: FromParser,
-        where_parser: WhereParser,
-    ):
+class S3SelectParser:
+    def __init__(self, source_data: Dict[str, str]):
         # Source data is in the format: {source: json}
         # Where 'json' is one or more json documents separated by a newline
         self.documents = source_data
-        self.table_prefix = table_prefix
-        self.from_parser = from_parser
-        self.where_parser = where_parser
+        self.table_prefix = "s3object"
 
     def parse(self, query: str, parameters=None) -> List[Dict[str, Any]]:
         query = query.replace("\n", " ")
@@ -31,7 +21,7 @@ class Parser:
         # First clause is whatever comes in front of SELECT - which should be nothing
         _ = clauses[0]
         # FROM
-        from_parser = self.from_parser()
+        from_parser = S3FromParser()
         from_clauses = from_parser.parse(clauses[2])
 
         source_data = from_parser.get_source_data(self.documents)
@@ -41,7 +31,7 @@ class Parser:
         # WHERE
         if len(clauses) > 3:
             where_clause = clauses[3]
-            source_data = self.where_parser(source_data).parse(where_clause, parameters)
+            source_data = S3WhereParser(source_data).parse(where_clause, parameters)
 
         # SELECT
         select_clause = clauses[1]
@@ -54,17 +44,7 @@ class Parser:
         )
 
 
-class S3SelectParser(Parser):
-    def __init__(self, source_data: Dict[str, str]):
-        super().__init__(
-            source_data,
-            table_prefix="s3object",
-            from_parser=S3FromParser,
-            where_parser=S3WhereParser,
-        )
-
-
-class DynamoDBStatementParser(Parser):
+class DynamoDBStatementParser:
     def __init__(self, source_data: Dict[str, List[Dict[str, Any]]]):
         """
         Source Data should be a list of DynamoDB documents, mapped to the table name
@@ -80,12 +60,31 @@ class DynamoDBStatementParser(Parser):
           ..
         }
         """
-        super().__init__(
-            source_data,
-            table_prefix=None,
-            from_parser=DynamoDBFromParser,
-            where_parser=DynamoDBWhereParser,
-        )
+        # Source data is in the format: {source: json}
+        # Where 'json' is one or more json documents separated by a newline
+        self.documents = source_data
+
+    def parse(self, query: str, parameters=None) -> List[Dict[str, Any]]:
+        query = query.replace("\n", " ")
+        clauses = re.split("SELECT | FROM | WHERE ", query, flags=re.IGNORECASE)
+        # First clause is whatever comes in front of SELECT - which should be nothing
+        _ = clauses[0]
+        # FROM
+        from_parser = DynamoDBFromParser()
+        from_clauses = from_parser.parse(clauses[2])
+
+        source_data = from_parser.get_source_data(self.documents)
+
+        # WHERE
+        if len(clauses) > 3:
+            where_clause = clauses[3]
+            source_data = DynamoDBWhereParser(source_data).parse(
+                where_clause, parameters
+            )
+
+        # SELECT
+        select_clause = clauses[1]
+        return SelectParser().parse(select_clause, from_clauses, source_data)
 
     @classmethod
     def get_query_metadata(cls, query: str):

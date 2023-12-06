@@ -57,7 +57,7 @@ class FunctionClause(SelectClause):
 
 
 class SelectParser:
-    def __init__(self, table_prefix: Optional[str]):
+    def __init__(self, table_prefix: Optional[str] = None):
         self.table_prefix = table_prefix
 
     def parse(
