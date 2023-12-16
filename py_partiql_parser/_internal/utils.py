@@ -1,6 +1,7 @@
 import re
 import sys
 from collections import OrderedDict
+from copy import copy
 from typing import Any, Dict, List, Iterator, Optional, Tuple, Union, TYPE_CHECKING
 
 if sys.version_info[:2] > (3, 8):
@@ -10,6 +11,12 @@ else:
 
 if TYPE_CHECKING:
     from .where_parser import AbstractWhereClause
+
+from .._packages.boto3.types import TypeDeserializer, TypeSerializer
+
+
+deserializer = TypeDeserializer()
+serializer = TypeSerializer()
 
 
 def is_dict(dct: Any) -> bool:
@@ -220,13 +227,25 @@ class CaseInsensitiveDict(MutableMapping[str, Any]):
         # Compare insensitively
         return dict(self.lower_items()) == dict(other.lower_items())
 
+    def get_regular(self) -> Dict[str, Any]:
+        dct = {}
+        for key, val in self.items():
+            if isinstance(val, CaseInsensitiveDict):
+                dct[key] = val.get_regular()
+            else:
+                dct[key] = val
+        return dct
+
     def get_original(self, key: str) -> "CaseInsensitiveDict":
         original_key, original_value = self._store[key.lower()]
         return CaseInsensitiveDict({original_key: original_value})
 
     # Copy is required
     def copy(self) -> "CaseInsensitiveDict":
-        return CaseInsensitiveDict(self._store.values())  # type: ignore[arg-type]
+        _new = CaseInsensitiveDict()
+        for key, value in self._store.values():
+            _new[key] = copy(value)
+        return _new
 
     def __repr__(self) -> str:
         return str(dict(self.items()))

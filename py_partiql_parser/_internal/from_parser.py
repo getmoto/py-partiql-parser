@@ -165,3 +165,6 @@ class DynamoDBFromParser(FromParser):
 
             if table_name[0] == '"' and table_name[-1] == '"':
                 self.clauses[alias] = table_name[1:-1]
+
+            if table_name[0] == "'" and table_name[-1] == "'":
+                self.clauses[alias] = table_name[1:-1]
