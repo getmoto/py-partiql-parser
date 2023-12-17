@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+0.5.0
+-----
+ - Improved typing support
+ - Support for INSERT/UPDATE/DELETE statements
+
 0.4.2
 -----
  - Support for Python 3.12
