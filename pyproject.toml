@@ -1,6 +1,6 @@
 [project]
 name = "py-partiql-parser"
-version = "0.4.2"
+version = "0.5.0"
 description = "Pure Python PartiQL Parser"
 readme = "README.md"
 keywords = ["pypartiql", "parser"]
@@ -18,7 +18,7 @@ dependencies = []
 dev = [
     "black==22.6.0",
     "flake8",
-    "mypy==0.971",
+    "mypy",
     "pytest"
 ]
 

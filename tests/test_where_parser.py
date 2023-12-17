@@ -191,4 +191,4 @@ class TestDynamoDBParse:
         resp = parser.parse(
             "body = ?", parameters=[{"M": {"data": {"S": "some text"}}}]
         )
-        assert resp == data  # type: ignore[comparison-overlap]
+        assert resp == data
