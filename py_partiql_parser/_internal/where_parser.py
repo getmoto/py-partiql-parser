@@ -4,11 +4,7 @@ from typing import Any, Callable, Dict, List, Optional
 from .clause_tokenizer import ClauseTokenizer
 from .utils import find_value_in_document
 from .utils import find_value_in_dynamodb_document, CaseInsensitiveDict
-from .._packages.boto3.types import TypeDeserializer, TypeSerializer
-
-
-deserializer = TypeDeserializer()
-serializer = TypeSerializer()
+from .utils import serializer
 
 
 class AbstractWhereClause:

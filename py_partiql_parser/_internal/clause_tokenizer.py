@@ -43,7 +43,10 @@ class ClauseTokenizer:
         except IndexError:
             pass
 
-    def next_until(self, chars: List[str]) -> str:
+    def give_remaining(self) -> str:
+        return self.next_until(chars=[None])
+
+    def next_until(self, chars: List[Optional[str]]) -> str:
         """
         Return the following characters up until (but not including) any of the characters defined in chars
         :param chars:

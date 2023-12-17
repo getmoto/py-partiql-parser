@@ -1,11 +1,20 @@
 import re
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 
+from .delete_parser import DeleteParser
 from .from_parser import DynamoDBFromParser, S3FromParser, FromParser
+from .insert_parser import InsertParser
 from .select_parser import SelectParser
+from .update_parser import UpdateParser
 from .where_parser import DynamoDBWhereParser, S3WhereParser, WhereParser
 from .utils import is_dict, QueryMetadata, CaseInsensitiveDict
+
+
+TYPE_RESPONSE = Tuple[
+    List[Dict[str, Any]],
+    Dict[str, List[Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]]],
+]
 
 
 class S3SelectParser:
@@ -66,9 +75,28 @@ class DynamoDBStatementParser:
             for key, val in source_data.items()
         }
 
-    def parse(
+    def parse(  # type: ignore[return]
         self, query: str, parameters: Optional[List[Dict[str, Any]]] = None
-    ) -> List[Dict[str, Any]]:
+    ) -> TYPE_RESPONSE:
+        if query.lower().startswith("select"):
+            return_data, updates = self._parse_select(query, parameters)
+            for item in return_data:
+                for key, val in item.items():
+                    item[key] = val.get_regular()
+            return return_data, updates
+
+        if query.lower().startswith("update"):
+            return self._parse_update(query)
+
+        if query.lower().startswith("delete"):
+            return self._parse_delete(query)
+
+        if query.lower().startswith("insert"):
+            return self._parse_insert(query)
+
+    def _parse_select(
+        self, query: str, parameters: Optional[List[Dict[str, Any]]] = None
+    ) -> TYPE_RESPONSE:
         query = query.replace("\n", " ")
         clauses = re.split("SELECT | FROM | WHERE ", query, flags=re.IGNORECASE)
         # First clause is whatever comes in front of SELECT - which should be nothing
@@ -87,7 +115,59 @@ class DynamoDBStatementParser:
 
         # SELECT
         select_clause = clauses[1]
-        return SelectParser().parse(select_clause, from_parser.clauses, source_data)
+        queried_data = SelectParser().parse(
+            select_clause, from_parser.clauses, source_data
+        )
+        updates: Dict[
+            str, List[Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]]
+        ] = {}
+        return queried_data, updates
+
+    def _parse_update(self, query: str) -> TYPE_RESPONSE:
+        query = query.replace("\n", " ")
+
+        table_name, attrs_to_update, attrs_to_filter = UpdateParser().parse(query)
+
+        source_data = self.documents[table_name]
+        updates_per_table: Dict[
+            str, List[Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]]
+        ] = {table_name: []}
+
+        for item in source_data:
+            if all([item.get(name) == val for name, val in attrs_to_filter]):
+                new_item = item.copy()
+                for attr_key, attr_value in attrs_to_update:
+                    if attr_value is None:
+                        new_item.pop(attr_key, None)
+                    else:
+                        new_item[attr_key] = attr_value
+                updates_per_table[table_name].append(
+                    (item.get_regular(), new_item.get_regular())
+                )
+
+        return [], updates_per_table
+
+    def _parse_delete(self, query: str) -> TYPE_RESPONSE:
+        query = query.replace("\n", " ")
+
+        table_name, attrs_to_filter = DeleteParser().parse(query)
+
+        source_data = self.documents[table_name]
+        deletes_per_table: Dict[
+            str, List[Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]]
+        ] = {table_name: []}
+
+        for item in source_data:
+            if all([item.get(name) == val for name, val in attrs_to_filter]):
+                deletes_per_table[table_name].append((item.get_regular(), None))
+
+        return [], deletes_per_table
+
+    def _parse_insert(self, query: str) -> TYPE_RESPONSE:
+        query = query.replace("\n", " ")
+
+        table_name, new_item = InsertParser().parse(query)
+        return [], {table_name: [(None, new_item)]}
 
     @classmethod
     def get_query_metadata(cls, query: str) -> QueryMetadata:
