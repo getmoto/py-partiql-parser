@@ -41,3 +41,27 @@ def test_nested_filter_names() -> None:
     metadata = DynamoDBStatementParser.get_query_metadata(query)
 
     assert metadata.get_filter_names() == ["k1", "k2.sth"]
+
+
+def test_update_statement() -> None:
+    query = 'UPDATE users SET "first_name" = ?, "last_name" = ? WHERE "username"= ?'
+    metadata = DynamoDBStatementParser.get_query_metadata(query)
+
+    assert metadata.get_table_names() == ["users"]
+    assert metadata.get_filter_names() == []
+
+
+def test_insert_statement() -> None:
+    query = "INSERT INTO 'mytable' value {'id': 'id1'}"
+    metadata = DynamoDBStatementParser.get_query_metadata(query)
+
+    assert metadata.get_table_names() == ["mytable"]
+    assert metadata.get_filter_names() == []
+
+
+def test_delete_statement() -> None:
+    query = "DELETE FROM 'tablename' WHERE Id='id1'"
+    metadata = DynamoDBStatementParser.get_query_metadata(query)
+
+    assert metadata.get_table_names() == ["tablename"]
+    assert metadata.get_filter_names() == []

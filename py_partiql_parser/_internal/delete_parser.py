@@ -48,6 +48,11 @@ class DeleteParser:
                     assert current_phrase.upper() == "AND"
                     section = "WHERE"
                     current_phrase = ""
+                if section == "TABLE_NAME":
+                    table_name = current_phrase
+                    current_phrase = ""
+                    tokenizer.skip_white_space()
+                    section = "SECTION_WHERE"
                 continue
             elif c in ["'", '"']:
                 if section == "TABLE_NAME":

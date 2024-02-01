@@ -41,6 +41,11 @@ class InsertParser:
                     attr = JsonParser().parse(tokenizer.give_remaining())
                     for key, value in attr.items():
                         attr[key] = serializer.serialize(value)
+                if section == "TABLE_NAME":
+                    table_name = current_phrase
+                    current_phrase = ""
+                    tokenizer.skip_white_space()
+                    section = "SECTION_VALUE"
                 continue
             elif c in ["'", '"']:
                 if section == "TABLE_NAME":

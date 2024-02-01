@@ -1,6 +1,16 @@
 CHANGELOG
 =========
 
+0.5.1
+-----
+
+ - Support INSERT/DELETE/UPDATE queries:
+
+   - that contain a table name without quotes
+   - that contain parameters
+   - when calling get_query_metadata()
+
+
 0.5.0
 -----
  - Improved typing support
