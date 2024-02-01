@@ -2,6 +2,7 @@ import re
 
 from typing import Dict, Any, List, Optional, Tuple
 
+from ..exceptions import ParserException
 from .delete_parser import DeleteParser
 from .from_parser import DynamoDBFromParser, S3FromParser, FromParser
 from .insert_parser import InsertParser
@@ -86,7 +87,7 @@ class DynamoDBStatementParser:
             return return_data, updates
 
         if query.lower().startswith("update"):
-            return self._parse_update(query)
+            return self._parse_update(query, parameters)
 
         if query.lower().startswith("delete"):
             return self._parse_delete(query)
@@ -123,10 +124,30 @@ class DynamoDBStatementParser:
         ] = {}
         return queried_data, updates
 
-    def _parse_update(self, query: str) -> TYPE_RESPONSE:
+    def _parse_update(
+        self, query: str, parameters: Optional[List[Dict[str, Any]]] = None
+    ) -> TYPE_RESPONSE:
         query = query.replace("\n", " ")
 
         table_name, attrs_to_update, attrs_to_filter = UpdateParser().parse(query)
+
+        parameters_requested = len(
+            [_ for _, val in attrs_to_update + attrs_to_filter if val == "?"]
+        )
+        if parameters_requested and len(parameters) != parameters_requested:  # type: ignore
+            raise ParserException(
+                name="ValidationError",
+                message="Number of parameters in request and statement don't match.",
+            )
+
+        attrs_to_update = [
+            (key, parameters.pop(0) if val == "?" else val)  # type: ignore
+            for key, val in attrs_to_update
+        ]
+        attrs_to_filter = [
+            (key, parameters.pop(0) if val == "?" else val)  # type: ignore
+            for key, val in attrs_to_filter
+        ]
 
         source_data = self.documents[table_name]
         updates_per_table: Dict[
@@ -172,15 +193,31 @@ class DynamoDBStatementParser:
     @classmethod
     def get_query_metadata(cls, query: str) -> QueryMetadata:
         query = query.replace("\n", " ")
-        clauses = re.split("SELECT | FROM | WHERE ", query, flags=re.IGNORECASE)
+        if query.lower().startswith("select"):
+            clauses = re.split("SELECT | FROM | WHERE ", query, flags=re.IGNORECASE)
 
-        from_parser = FromParser(clauses[2])
+            from_parser = FromParser(clauses[2])
+            # WHERE
+            if len(clauses) > 3:
+                where_clause = clauses[3]
+                where = WhereParser.parse_where_clause(where_clause)
+            else:
+                where = None
 
-        # WHERE
-        if len(clauses) > 3:
-            where_clause = clauses[3]
-            where = WhereParser.parse_where_clause(where_clause)
-        else:
-            where = None
+            return QueryMetadata(
+                tables=from_parser.clauses, where_clause=where, is_select_query=True
+            )
+        elif query.lower().startswith("update"):
+            table_name, attrs_to_update, attrs_to_filter = UpdateParser().parse(query)
+            return QueryMetadata(tables={table_name: table_name}, where_clause=None)
+        elif query.lower().startswith("delete"):
+            query = query.replace("\n", " ")
 
-        return QueryMetadata(tables=from_parser.clauses, where_clause=where)
+            table_name, attrs_to_filter = DeleteParser().parse(query)
+            return QueryMetadata(tables={table_name: table_name})
+        elif query.lower().startswith("insert"):
+            query = query.replace("\n", " ")
+
+            table_name, new_item = InsertParser().parse(query)
+            return QueryMetadata(tables={table_name: table_name})
+        raise Exception

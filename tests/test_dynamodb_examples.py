@@ -259,6 +259,32 @@ def test_update_with_multiple_keys() -> None:
     assert updates == {"table": [(items[1], updated_item)]}
 
 
+def test_update_with_quoted_attributes_and_parameters() -> None:
+    # Note that the table is without parameters
+    query = 'UPDATE users SET "first_name" = ?, "last_name" = ? WHERE "id"= ?'
+    items = [
+        {"id": {"S": "yes"}, "first_name": {"S": "old"}, "last_name": {"S": "old"}},
+        {"id": {"S": "no"}, "first_name": {"S": "old"}, "last_name": {"S": "old"}},
+    ]
+    return_value, updates = DynamoDBStatementParser(source_data={"users": items}).parse(
+        query, parameters=[{"S": "fn"}, {"S": "ln"}, {"S": "yes"}]
+    )
+
+    assert return_value == []
+    assert len(updates["users"]) == 1
+    old, new = updates["users"][0]
+    assert old == {
+        "id": {"S": "yes"},
+        "first_name": {"S": "old"},
+        "last_name": {"S": "old"},
+    }
+    assert new == {
+        "id": {"S": "yes"},
+        "first_name": {"S": "fn"},
+        "last_name": {"S": "ln"},
+    }
+
+
 def test_update_remove() -> None:
     query = "UPDATE 'table' REMOVE attr WHERE Id='id1'"
     items = [
@@ -276,8 +302,11 @@ def test_update_remove() -> None:
     assert updates == {"table": [(items[0], updated_item)]}
 
 
-def test_delete() -> None:
-    query = "DELETE FROM 'tablename' WHERE Id='id1'"
+@pytest.mark.parametrize(
+    "query",
+    ["DELETE FROM 'tablename' WHERE Id='id1'", "DELETE FROM tablename WHERE Id='id1'"],
+)
+def test_delete(query: str) -> None:
     items = [
         {"id": {"S": "id1"}, "attr": {"S": "sth"}},
         {"id": {"S": "id2"}, "attr": {"S": "oth"}},
@@ -317,8 +346,14 @@ def test_delete_with_no_hits() -> None:
     assert updates == {"tablename": []}
 
 
-def test_insert() -> None:
-    query = "INSERT INTO 'mytable' value {'id': 'id1'}"
+@pytest.mark.parametrize(
+    "query",
+    [
+        "INSERT INTO 'mytable' value {'id': 'id1'}",
+        "INSERT INTO mytable value {'id': 'id1'}",
+    ],
+)
+def test_insert(query: str) -> None:
     items = [{"id": {"S": "asdf"}}]
     return_value, updates = DynamoDBStatementParser(
         source_data={"mytable": items}

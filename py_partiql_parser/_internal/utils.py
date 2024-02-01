@@ -133,9 +133,11 @@ class QueryMetadata:
         self,
         tables: Dict[str, str],
         where_clause: Optional["AbstractWhereClause"] = None,
+        is_select_query: bool = False,
     ):
         self._tables = tables
         self._where_clause = where_clause
+        self._is_select_query = is_select_query
 
     def get_table_names(self) -> List[str]:
         return list(self._tables.values())
@@ -144,6 +146,9 @@ class QueryMetadata:
         if self._where_clause:
             return self._where_clause.get_filter_names()
         return []
+
+    def is_select_query(self) -> bool:
+        return self._is_select_query
 
 
 class Variable:
