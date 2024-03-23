@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+0.5.2
+-----
+
+ - Add json_to_csv converter
+
+
 0.5.1
 -----
 

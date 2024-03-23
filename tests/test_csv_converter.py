@@ -1,4 +1,4 @@
-from py_partiql_parser._internal.csv_converter import csv_to_json
+from py_partiql_parser import csv_to_json, json_to_csv
 import json
 
 
@@ -37,3 +37,18 @@ def test_csv_to_json_with_headers() -> None:
 
     line2 = json.loads(lines[2])
     assert line2["City"] == "Seattle"
+
+
+def test_json_to_csv() -> None:
+    json_result = csv_to_json(input_csv)
+    lines = json_result.split("\n")
+
+    csv_result = json_to_csv(
+        [json.loads(lines[0])], field_delimiter=",", record_delimiter="\n"
+    )
+    assert csv_result == "Sam,(949) 555-6701,Irvine,Solutions Architect\n"
+
+    csv_result = json_to_csv(
+        [json.loads(lines[4])], field_delimiter=",", record_delimiter="\n"
+    )
+    assert csv_result == "Sean,(949) 555-6705,Chicago,Developer\n"
