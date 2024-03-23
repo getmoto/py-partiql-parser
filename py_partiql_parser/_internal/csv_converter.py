@@ -1,5 +1,5 @@
 import json
-from typing import List
+from typing import Any, Dict, List
 
 
 def csv_to_json(input: str, headers_included: bool = False) -> str:
@@ -18,3 +18,14 @@ def csv_to_json(input: str, headers_included: bool = False) -> str:
     if output.endswith("\n"):
         output = output.rstrip("\n")
     return output
+
+
+def json_to_csv(
+    input: List[Dict[str, Any]], field_delimiter: str, record_delimiter: str
+) -> str:
+    result = ""
+    for row in input:
+        result += (
+            field_delimiter.join([f"{v}" for v in row.values()]) + record_delimiter
+        )
+    return result
