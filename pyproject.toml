@@ -1,6 +1,6 @@
 [project]
 name = "py-partiql-parser"
-version = "0.5.2"
+version = "0.5.3"
 description = "Pure Python PartiQL Parser"
 readme = "README.md"
 keywords = ["pypartiql", "parser"]
@@ -8,6 +8,9 @@ license = {text = "MIT"}
 authors = [{name="Bert Blommers", email="info@bertblommers.nl"}]
 
 dependencies = []
+
+[tool.setuptools]
+packages = ["py_partiql_parser"]
 
 [project.urls]
 "Homepage" = "https://github.com/getmoto/py-partiql-parser"
