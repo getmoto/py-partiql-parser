@@ -1,6 +1,6 @@
 [project]
 name = "py-partiql-parser"
-version = "0.5.3"
+version = "0.5.4"
 description = "Pure Python PartiQL Parser"
 readme = "README.md"
 keywords = ["pypartiql", "parser"]
@@ -9,8 +9,8 @@ authors = [{name="Bert Blommers", email="info@bertblommers.nl"}]
 
 dependencies = []
 
-[tool.setuptools]
-packages = ["py_partiql_parser"]
+[tool.hatch.build]
+include = ["py_partiql_parser/*"]
 
 [project.urls]
 "Homepage" = "https://github.com/getmoto/py-partiql-parser"
@@ -26,8 +26,5 @@ dev = [
 ]
 
 [build-system]
-requires = [
-    "setuptools>=59.0.0",
-    "wheel"
-]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
