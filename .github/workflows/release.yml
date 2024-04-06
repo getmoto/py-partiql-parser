@@ -11,6 +11,8 @@ jobs:
   release-py-partiql-parser:
     runs-on: ubuntu-latest
     name: Release Py-Partiql-Parser
+    permissions:
+      packages: write
     env:
       VERSION: 0.0.0
     steps:
