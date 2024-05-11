@@ -88,15 +88,12 @@ class S3FromParser(FromParser):
             from_query
         ].endswith("]")
 
-        source_data = JsonParser().parse(documents[from_query])
+        source_data = list(JsonParser().parse(documents[from_query]))
 
         if doc_is_list:
-            return {"_1": source_data}
+            return {"_1": source_data[0]}
         elif from_alias:
-            if isinstance(source_data, list):
-                return [CaseInsensitiveDict({from_alias: doc}) for doc in source_data]
-            else:
-                return CaseInsensitiveDict({from_alias: source_data})
+            return [CaseInsensitiveDict({from_alias: doc}) for doc in source_data]
         else:
             return source_data
 
@@ -135,10 +132,10 @@ class S3FromParser(FromParser):
                     doc_is_list = source_data[new_key].startswith("[") and source_data[
                         new_key
                     ].endswith("]")
-                    source_data = JsonParser().parse(source_data[new_key])
+                    source_data = list(JsonParser().parse(source_data[new_key]))  # type: ignore
                     if root_doc and doc_is_list:
                         # AWS behaviour when the root-document is a list
-                        source_data = {"_1": source_data}
+                        source_data = {"_1": source_data[0]}  # type: ignore
                     elif key_so_far == entire_key:
                         if isinstance(source_data, list):  # type: ignore[unreachable]
                             source_data = [{alias: doc} for doc in source_data]  # type: ignore[unreachable]

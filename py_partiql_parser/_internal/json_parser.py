@@ -22,17 +22,30 @@ class JsonParser:
     ) -> Any:
         if not (original.startswith("{") or original.startswith("[")):
             # Doesn't look like JSON - let's return as a variable
-            return original if original.isnumeric() else Variable(original)
+            yield original if original.isnumeric() else Variable(original)
+        tokenizer = tokenizer or ClauseTokenizer(original)
+        while tokenizer.current() is not None:
+            result = self._parse(original, tokenizer, only_parse_initial)
+            if result is not None:
+                yield result
+
+    def _parse(
+        self,
+        original: str,
+        tokenizer: ClauseTokenizer,
+        only_parse_initial: bool = False,
+    ) -> Any:
         section: Optional[str] = None  # DICT_KEY | KEY_TO_VALUE | DICT_VAL | OBJECT_END
         dict_key = ""
         current_phrase = ""
         result = CaseInsensitiveDict()
-        tokenizer = tokenizer or ClauseTokenizer(original)
+        level = 0
         while True:
             c = tokenizer.next()
             if not c:
-                break
+                return None
             elif c == "[" and (not section or section == "KEY_TO_VALUE"):
+                level += 1
                 # Start of a list
                 if not section:
                     return self._parse_list(original, tokenizer)
@@ -41,6 +54,8 @@ class JsonParser:
                     section = None
                     current_phrase = ""
             elif c in ["{", ","] and (not section or section == "OBJECT_END"):
+                if c == "{":
+                    level += 1
                 # Start of a key
                 section = "DICT_KEY"
                 tokenizer.skip_until(ACCEPTED_QUOTES)
@@ -52,9 +67,10 @@ class JsonParser:
                 section = "KEY_TO_VALUE"
                 current_phrase = ""
             elif c in ["{"] and section == "KEY_TO_VALUE":
+                level += 1
                 # Start of a value with a new dictionary
                 tokenizer.revert()  # Ensure we start the new parser with the initial {
-                result[dict_key] = self.parse(original, tokenizer)
+                result[dict_key] = self._parse(original, tokenizer)
                 section = None
                 current_phrase = ""
             elif c in ACCEPTED_QUOTES and section == "KEY_TO_VALUE":
@@ -67,6 +83,7 @@ class JsonParser:
                 section = None
                 current_phrase = ""
             elif c in ["}"] and section in ["VAR_VALUE", "INT_VALUE"]:
+                level -= 1
                 # End of a variable/number
                 if section == "INT_VALUE":
                     result[dict_key] = int(current_phrase)
@@ -90,29 +107,11 @@ class JsonParser:
                 tokenizer.revert()
                 section = None
                 current_phrase = ""
-            elif section in ["OBJECT_END"]:
-                next_documents = self.parse(original, tokenizer)
-                if next_documents == {}:
-                    return result
-                elif isinstance(next_documents, list):
-                    return [result] + next_documents
-                else:
-                    return [result, next_documents]
             elif c == "}" and section is None:
-                section = "OBJECT_END"
-                # We know whether we are at the end of an object at this point
-                # But we don't know whether this is:
-                # - end of the root object
-                # - end of a nested object
-                # - inbetween multiple objects (separated by new-line)
-                tokenizer.skip_white_space()
-                if tokenizer.current() == "{":
-                    # we're inbetween multiple objects - continue parsing
-                    tokenizer.revert()
-                    pass
+                level -= 1
+                if level == 0:
+                    return result
                 else:
-                    # we're at the end of the root object - next char is probably None. Break and return to the user
-                    # we're at the end of a nested object - next char is probably }.    Break and let the parent processor takeover
                     break
             elif c in [" ", NEW_LINE] and section not in ["DICT_KEY", "DICT_VAL"]:
                 pass
@@ -126,7 +125,6 @@ class JsonParser:
                         section = "VAR_VALUE"
                 if section in ["DICT_KEY", "DICT_VAL", "INT_VALUE", "VAR_VALUE"]:
                     current_phrase += c
-
         return result
 
     def _parse_list(self, original: str, tokenizer: ClauseTokenizer) -> Any:
@@ -139,7 +137,7 @@ class JsonParser:
                 break
             if c == "{":
                 tokenizer.revert()  # Ensure we start the new parser with the initial {
-                result.append(self.parse(original, tokenizer, only_parse_initial=True))
+                result.append(self._parse(original, tokenizer, only_parse_initial=True))
                 if tokenizer.current() == "]":
                     break
                 tokenizer.skip_until([","])
