@@ -38,7 +38,7 @@ class InsertParser:
                 if section == "SECTION_VALUE":
                     assert current_phrase.upper() in ["VALUE"]
                     tokenizer.skip_white_space()
-                    attr = next(JsonParser().parse(tokenizer.give_remaining()))
+                    attr = next(JsonParser.parse(tokenizer.give_remaining()))
                     for key, value in attr.items():
                         attr[key] = serializer.serialize(value)
                 if section == "TABLE_NAME":

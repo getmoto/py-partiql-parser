@@ -88,7 +88,7 @@ class S3FromParser(FromParser):
             from_query
         ].endswith("]")
 
-        source_data = list(JsonParser().parse(documents[from_query]))
+        source_data = list(JsonParser.parse(documents[from_query]))
 
         if doc_is_list:
             return {"_1": source_data[0]}
@@ -132,7 +132,7 @@ class S3FromParser(FromParser):
                     doc_is_list = source_data[new_key].startswith("[") and source_data[
                         new_key
                     ].endswith("]")
-                    source_data = list(JsonParser().parse(source_data[new_key]))  # type: ignore
+                    source_data = list(JsonParser.parse(source_data[new_key]))  # type: ignore
                     if root_doc and doc_is_list:
                         # AWS behaviour when the root-document is a list
                         source_data = {"_1": source_data[0]}  # type: ignore

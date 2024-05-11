@@ -1,5 +1,5 @@
 from json import JSONEncoder
-from typing import Any, List, Optional
+from typing import Any, List, Iterator, Optional
 
 from .clause_tokenizer import ClauseTokenizer
 from .utils import CaseInsensitiveDict, Variable
@@ -14,23 +14,25 @@ class JsonParser:
     So we can't use the builtin JSON parser
     """
 
-    def parse(
-        self,
+    @staticmethod
+    def parse(  # type: ignore[misc]
         original: str,
         tokenizer: Optional[ClauseTokenizer] = None,
         only_parse_initial: bool = False,
-    ) -> Any:
+    ) -> Iterator[Any]:
         if not (original.startswith("{") or original.startswith("[")):
             # Doesn't look like JSON - let's return as a variable
             yield original if original.isnumeric() else Variable(original)
         tokenizer = tokenizer or ClauseTokenizer(original)
         while tokenizer.current() is not None:
-            result = self._parse(original, tokenizer, only_parse_initial)
+            result = JsonParser._get_next_document(
+                original, tokenizer, only_parse_initial
+            )
             if result is not None:
                 yield result
 
-    def _parse(
-        self,
+    @staticmethod
+    def _get_next_document(  # type: ignore[misc]
         original: str,
         tokenizer: ClauseTokenizer,
         only_parse_initial: bool = False,
@@ -48,9 +50,9 @@ class JsonParser:
                 level += 1
                 # Start of a list
                 if not section:
-                    return self._parse_list(original, tokenizer)
+                    return JsonParser._parse_list(original, tokenizer)
                 else:
-                    result[dict_key] = self._parse_list(original, tokenizer)
+                    result[dict_key] = JsonParser._parse_list(original, tokenizer)
                     section = None
                     current_phrase = ""
             elif c in ["{", ","] and (not section or section == "OBJECT_END"):
@@ -70,7 +72,7 @@ class JsonParser:
                 level += 1
                 # Start of a value with a new dictionary
                 tokenizer.revert()  # Ensure we start the new parser with the initial {
-                result[dict_key] = self._parse(original, tokenizer)
+                result[dict_key] = JsonParser._get_next_document(original, tokenizer)
                 section = None
                 current_phrase = ""
             elif c in ACCEPTED_QUOTES and section == "KEY_TO_VALUE":
@@ -127,7 +129,8 @@ class JsonParser:
                     current_phrase += c
         return result
 
-    def _parse_list(self, original: str, tokenizer: ClauseTokenizer) -> Any:
+    @staticmethod
+    def _parse_list(original: str, tokenizer: ClauseTokenizer) -> List[Any]:  # type: ignore
         result: List[Any] = list()
         section = None
         current_phrase = ""
@@ -137,7 +140,11 @@ class JsonParser:
                 break
             if c == "{":
                 tokenizer.revert()  # Ensure we start the new parser with the initial {
-                result.append(self._parse(original, tokenizer, only_parse_initial=True))
+                result.append(
+                    JsonParser._get_next_document(
+                        original, tokenizer, only_parse_initial=True
+                    )
+                )
                 if tokenizer.current() == "]":
                     break
                 tokenizer.skip_until([","])
