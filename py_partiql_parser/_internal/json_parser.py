@@ -15,19 +15,13 @@ class JsonParser:
     """
 
     @staticmethod
-    def parse(  # type: ignore[misc]
-        original: str,
-        tokenizer: Optional[ClauseTokenizer] = None,
-        only_parse_initial: bool = False,
-    ) -> Iterator[Any]:
+    def parse(original: str) -> Iterator[Any]:  # type: ignore[misc]
         if not (original.startswith("{") or original.startswith("[")):
             # Doesn't look like JSON - let's return as a variable
             yield original if original.isnumeric() else Variable(original)
-        tokenizer = tokenizer or ClauseTokenizer(original)
+        tokenizer = ClauseTokenizer(original)
         while tokenizer.current() is not None:
-            result = JsonParser._get_next_document(
-                original, tokenizer, only_parse_initial
-            )
+            result = JsonParser._get_next_document(original, tokenizer)
             if result is not None:
                 yield result
 

@@ -1,6 +1,17 @@
 CHANGELOG
 =========
 
+0.5.5
+-----
+ - Add JsonParser to public API
+ - Improve performance for JsonParser when parsing a source with many documents
+
+
+0.5.3 & 0.5.4
+-----
+ - Fix project build
+
+
 0.5.2
 -----
 
