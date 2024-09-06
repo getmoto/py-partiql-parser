@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+0.5.6
+-----
+ - DynamoDB table names can now be MixedCased
+
 0.5.5
 -----
  - Add JsonParser to public API

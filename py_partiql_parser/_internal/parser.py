@@ -105,7 +105,7 @@ class DynamoDBStatementParser:
         # FROM
         from_parser = DynamoDBFromParser(from_clause=clauses[2])
 
-        source_data = self.documents[list(from_parser.clauses.values())[0].lower()]
+        source_data = self.documents[list(from_parser.clauses.values())[0]]
 
         # WHERE
         if len(clauses) > 3:

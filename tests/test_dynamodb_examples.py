@@ -32,8 +32,8 @@ double_doc = [input_object1, input_object2, input_object3]
 
 
 def test_table_with_single_row() -> None:
-    query = "select * from msgs"
-    source = {"msgs": simple_doc}
+    query = "select * from Msgs"
+    source = {"Msgs": simple_doc}
     assert _get_result(query, source) == [input_object1]
 
 
