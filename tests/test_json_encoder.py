@@ -13,12 +13,12 @@ def test_json_output_can_be_dumped() -> None:
             "kids": None,
         }
     )
-    result = S3SelectParser(source_data={"s3object": input_with_none}).parse(query)
+    result = S3SelectParser(source_data=input_with_none).parse(query)
     assert f"[{input_with_none}]" == json.dumps(result, cls=SelectEncoder)
 
 
 def test_json_with_lists_can_be_dumped() -> None:
     query = "select * from s3object s"
     input_with_none = json.dumps(input_with_lists[0])
-    result = S3SelectParser(source_data={"s3object": input_with_none}).parse(query)
+    result = S3SelectParser(source_data=input_with_none).parse(query)
     assert f"[{input_with_none}]" == json.dumps(result, cls=SelectEncoder)

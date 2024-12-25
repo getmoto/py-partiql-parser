@@ -14,12 +14,15 @@ class SelectClause:
         self.table_prefix = table_prefix
         self.value = value.strip()
 
+        if self.value == self.table_prefix:
+            self.value = "*"
+
     def select(self, document: CaseInsensitiveDict) -> Any:
         if self.value == "*":
-            if self.table_prefix and self.table_prefix in document:
-                return document[self.table_prefix]
-            else:
-                return document
+            return document
+        if self.value.startswith(f"{self.table_prefix}."):
+            # removeprefix() is only available in py 3.9
+            self.value = self.value.replace(f"{self.table_prefix}.", "")
         if "." in self.value:
             key, remaining = self.value.split(".", maxsplit=1)
             return find_nested_data_in_object(
@@ -33,7 +36,7 @@ class SelectClause:
             if is_dict(document[self.value]):
                 return document[self.value]
             else:
-                return {self.value: document[self.value]}
+                return document.get_original(self.value)
 
     def __repr__(self) -> str:
         return f"<SelectClause({self.value})>"
@@ -48,9 +51,12 @@ class FunctionClause(SelectClause):
         self.function_name = function_name.strip()
 
     def execute(
-        self, aliases: Dict[str, str], documents: List[CaseInsensitiveDict]
-    ) -> Dict[str, int]:
-        return {"_1": len(documents)}
+        self, aliases: Dict[str, str], document: CaseInsensitiveDict, results: List[Any]
+    ) -> None:
+        if results:
+            results[0]["_1"] += 1
+        else:
+            results.append({"_1": 1})
 
     def __repr__(self) -> str:
         return f"<FunctionClause({self.function_name}({self.value}))>"
@@ -64,41 +70,6 @@ class FunctionClause(SelectClause):
 
 
 class SelectParser:
-    def __init__(self, table_prefix: Optional[str] = None):
-        self.table_prefix = table_prefix
-
-    def parse(
-        self,
-        select_clause: str,
-        aliases: Dict[str, Any],
-        documents: List[CaseInsensitiveDict],
-    ) -> List[Dict[str, Any]]:
-        clauses = SelectParser.parse_clauses(select_clause, prefix=self.table_prefix)
-
-        for clause in clauses:
-            if isinstance(clause, FunctionClause):
-                return [clause.execute(aliases, documents)]
-
-        result: List[Dict[str, Any]] = []
-
-        for json_document in documents:
-            filtered_document = dict()
-            for clause in clauses:
-                attr = clause.select(json_document)
-                if attr is not None and not isinstance(attr, MissingVariable):
-                    # Specific usecase:
-                    # select * from s3object[*].Name my_n
-                    if (
-                        "." in list(aliases.values())[0]
-                        and list(aliases.keys())[0] in attr
-                        and select_clause == "*"
-                    ):
-                        filtered_document.update({"_1": attr[list(aliases.keys())[0]]})
-                    else:
-                        filtered_document.update(attr)
-            result.append(filtered_document)
-        return result
-
     @classmethod
     def parse_clauses(
         cls, select_clause: str, prefix: Optional[str] = None
@@ -130,3 +101,81 @@ class SelectParser:
                 continue
             current_clause += c
         return results
+
+
+class S3SelectClauseParser(SelectParser):
+    def __init__(self, table_prefix: Optional[str]):
+        self.table_prefix = table_prefix
+
+    def parse(
+        self,
+        select_clause: str,
+        aliases: Dict[str, Any],
+        document: CaseInsensitiveDict,
+        results: List[Any],
+    ) -> None:
+        """
+        Select appropriate data and add it to the results
+        This data can be one of the following:
+          - the whole document
+          - part of the document
+          - the result of a function like COUNT()
+        """
+        clauses = SelectParser.parse_clauses(select_clause, prefix=self.table_prefix)
+
+        has_fn_clause = False
+
+        for clause in clauses:
+            if isinstance(clause, FunctionClause):
+                has_fn_clause = True
+                clause.execute(aliases, document, results)
+
+        if has_fn_clause:
+            return
+
+        filtered_document = dict()
+        for clause in clauses:
+            attr = clause.select(document)
+            if attr is not None and not isinstance(attr, MissingVariable):
+                # Specific usecase:
+                # select * from s3object[*].Name my_n
+                if (
+                    "." in list(aliases.values())[0]
+                    and list(aliases.keys()) != list(aliases.values())
+                    and list(aliases.keys())[0] in attr
+                    and select_clause == "*"
+                ):
+                    filtered_document.update({"_1": attr[list(aliases.keys())[0]]})
+                else:
+                    filtered_document.update(attr)
+        results.append(filtered_document)
+
+
+class DynamoDBSelectParser(SelectParser):
+    def parse(
+        self,
+        select_clause: str,
+        aliases: Dict[str, Any],
+        documents: List[CaseInsensitiveDict],
+    ) -> List[Dict[str, Any]]:
+        clauses = SelectParser.parse_clauses(select_clause)
+
+        result: List[Dict[str, Any]] = []
+
+        for json_document in documents:
+            filtered_document = dict()
+            for clause in clauses:
+                attr = clause.select(json_document)
+                if attr is not None and not isinstance(attr, MissingVariable):
+                    # Specific usecase:
+                    # select * from s3object[*].Name my_n
+                    if (
+                        "." in list(aliases.values())[0]
+                        and list(aliases.keys())[0] in attr
+                        and select_clause == "*"
+                    ):
+                        filtered_document.update({"_1": attr[list(aliases.keys())[0]]})
+                    else:
+                        filtered_document.update(attr)
+            result.append(filtered_document)
+        return result

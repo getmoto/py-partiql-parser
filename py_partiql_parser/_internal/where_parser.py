@@ -114,9 +114,6 @@ class WhereClause(AbstractWhereClause):
 
 
 class WhereParser:
-    def __init__(self, source_data: List[CaseInsensitiveDict]):
-        self.source_data = source_data
-
     @classmethod
     def parse_where_clause(
         cls, where_clause: str, tokenizer: Optional[ClauseTokenizer] = None
@@ -295,6 +292,9 @@ class WhereParser:
 
 
 class DynamoDBWhereParser(WhereParser):
+    def __init__(self, source_data: List[CaseInsensitiveDict]):
+        self.source_data = source_data
+
     def parse(
         self, _where_clause: str, parameters: Optional[List[Dict[str, Any]]]
     ) -> List[CaseInsensitiveDict]:
@@ -321,12 +321,11 @@ class DynamoDBWhereParser(WhereParser):
 
 
 class S3WhereParser(WhereParser):
-    def parse(self, _where_clause: str) -> Any:
-        # parameters argument is ignored - only relevant for DynamoDB
+    @classmethod
+    def applies(cls, doc: Any, table_prefix: str, _where_clause: str) -> bool:  # type: ignore[misc]
         where_clause = WhereParser.parse_where_clause(_where_clause)
 
-        return [
-            row
-            for row in self.source_data
-            if where_clause.apply(find_value_in_document, row)
-        ]
+        if isinstance(where_clause, WhereClause):
+            where_clause.left.remove(table_prefix)
+
+        return where_clause.apply(find_value_in_document, doc)

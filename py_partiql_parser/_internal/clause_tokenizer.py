@@ -5,6 +5,12 @@ class ClauseTokenizer:
     def __init__(self, from_clause: str):
         self.token_list = from_clause
         self.token_pos = 0
+        self.tokens_parsed = 0
+
+    def get_tokens_parsed(self) -> int:
+        x = self.tokens_parsed
+        self.tokens_parsed = 0
+        return x
 
     def current(self) -> Optional[str]:
         """
@@ -22,6 +28,7 @@ class ClauseTokenizer:
         """
         try:
             crnt_token = self.token_list[self.token_pos]
+            self.tokens_parsed += 1
             self.token_pos += 1
             return crnt_token
         except IndexError:
@@ -34,11 +41,13 @@ class ClauseTokenizer:
             return None
 
     def revert(self) -> None:
+        self.tokens_parsed -= 1
         self.token_pos -= 1
 
     def skip_white_space(self) -> None:
         try:
             while self.token_list[self.token_pos] in [" ", "\n"]:
+                self.tokens_parsed += 1
                 self.token_pos += 1
         except IndexError:
             pass

@@ -168,14 +168,48 @@ class TestFilter:
     ]
 
     def test_simple(self) -> None:
-        assert S3WhereParser(TestFilter.all_rows).parse(  # type: ignore[arg-type]
-            _where_clause="city = 'Los Angeles'"
-        ) == [{"Name": "Vinod", "city": "Los Angeles"}]
+        query = "s3.city = 'Los Angeles'"
+        assert not S3WhereParser.applies(
+            doc={"Name": "Sam", "city": "Irvine"},
+            table_prefix="s3",
+            _where_clause=query,
+        )
+        assert not S3WhereParser.applies(
+            doc={"Name": "Sam", "city": "Seattle"},
+            table_prefix="s3",
+            _where_clause=query,
+        )
+        assert not S3WhereParser.applies(
+            doc={"Name": "Sam", "city": "Chicago"},
+            table_prefix="s3",
+            _where_clause=query,
+        )
+        assert not S3WhereParser.applies(
+            doc={"Name": "Sam"}, table_prefix="s3", _where_clause=query
+        )
+
+        assert S3WhereParser.applies(
+            doc={"Name": "Sam", "city": "Los Angeles"},
+            table_prefix="s3",
+            _where_clause=query,
+        )
 
     def test_alias_nested_key(self) -> None:
-        assert S3WhereParser(TestFilter.all_rows).parse(  # type: ignore[arg-type]
-            _where_clause="notes.extra = 'y'"
-        ) == [{"Name": "Mary", "city": "Chicago", "notes": {"extra": "y"}}]
+        query = "s3.notes.extra = 'y'"
+        assert not S3WhereParser.applies(
+            doc={"Name": "Sam", "city": "Chicago"},
+            table_prefix="s3",
+            _where_clause=query,
+        )
+        assert not S3WhereParser.applies(
+            doc={"Name": "Sam"}, table_prefix="s3", _where_clause=query
+        )
+
+        assert S3WhereParser.applies(
+            doc={"Name": "Sam", "notes": {"extra": "y"}},
+            table_prefix="s3",
+            _where_clause=query,
+        )
 
 
 class TestDynamoDBParse:
