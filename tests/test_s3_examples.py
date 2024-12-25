@@ -22,7 +22,7 @@ input_json_object = {"a1": "b1", "a2": "b2"}
 @pytest.mark.xfail(reason="CSV functionality not yet implemented")
 def test_aws_sample__csv() -> None:
     query = "SELECT * FROM s3object s where s.\"Name\" = 'Jane'"
-    x = S3SelectParser(source_data={"s3object": input_data_csv}).parse(query)
+    x = S3SelectParser(source_data=input_data_csv).parse(query)
 
 
 @pytest.mark.xfail(
@@ -30,7 +30,7 @@ def test_aws_sample__csv() -> None:
 )
 def test_aws_sample__json__search_by_name() -> None:
     query = "SELECT * FROM s3object s where s.\"Name\" = 'Jane'"
-    result = S3SelectParser(source_data={"s3object": input_json_list}).parse(query)  # type: ignore
+    result = S3SelectParser(source_data=input_json_list).parse(query)  # type: ignore
     assert result == [
         {
             "Name": "Jane",
@@ -49,7 +49,7 @@ def test_aws_sample__json__search_by_name() -> None:
     ],
 )
 def test_aws_sample__json__search_by_city(query: str) -> None:
-    result = S3SelectParser(source_data={"s3object": json_as_lines}).parse(query)
+    result = S3SelectParser(source_data=json_as_lines).parse(query)
     assert len(result) == 4
     assert {
         "Name": "Jane",
@@ -79,7 +79,7 @@ def test_aws_sample__json__search_by_city(query: str) -> None:
 
 def test_aws_sample__json_select_multiple_attrs__search_by_city() -> None:
     query = "SELECT s.name, s.city FROM s3object s where s.\"City\" = 'Chicago'"
-    result = S3SelectParser(source_data={"s3object": json_as_lines}).parse(query)
+    result = S3SelectParser(source_data=json_as_lines).parse(query)
     assert len(result) == 4
     assert {
         "Name": "Jane",
@@ -101,33 +101,25 @@ def test_aws_sample__json_select_multiple_attrs__search_by_city() -> None:
 
 def test_aws_sample__object_select_all() -> None:
     query = "SELECT * FROM s3object"
-    result = S3SelectParser(
-        source_data={"s3object": json.dumps(input_json_object)}
-    ).parse(query)
+    result = S3SelectParser(source_data=json.dumps(input_json_object)).parse(query)
     assert result == [input_json_object]
 
 
 def test_aws_sample__s3object_is_case_insensitive() -> None:
     query = "SELECT * FROM s3obJEct"
-    result = S3SelectParser(
-        source_data={"s3object": json.dumps(input_json_object)}
-    ).parse(query)
+    result = S3SelectParser(source_data=json.dumps(input_json_object)).parse(query)
     assert result == [input_json_object]
 
 
 def test_aws_sample__object_select_everything() -> None:
     query = "SELECT s FROM s3object AS s"
-    result = S3SelectParser(
-        source_data={"s3object": json.dumps(input_json_object)}
-    ).parse(query)
+    result = S3SelectParser(source_data=json.dumps(input_json_object)).parse(query)
     assert result == [input_json_object]
 
 
 def test_aws_sample__object_select_attr() -> None:
     query = "SELECT s.a1 FROM s3object AS s"
-    result = S3SelectParser(
-        source_data={"s3object": json.dumps(input_json_object)}
-    ).parse(query)
+    result = S3SelectParser(source_data=json.dumps(input_json_object)).parse(query)
     assert result == [{"a1": "b1"}]
 
 
@@ -140,13 +132,13 @@ def test_case_insensitivity() -> None:
         + "\n"
         + json.dumps({"Name": "Vinod", "City": "Los Angeles"})
     )
-    parser = S3SelectParser(source_data={"s3object": all_rows})
+    parser = S3SelectParser(source_data=all_rows)
     assert parser.parse(query) == [{"Name": "Vinod", "City": "Los Angeles"}]
 
 
 def test_select_doc_using_asterisk() -> None:
     query = "select * from s3object[*]"
-    result = S3SelectParser(source_data={"s3object": json_as_lines}).parse(query)
+    result = S3SelectParser(source_data=json_as_lines).parse(query)
     assert len(result) == 7
     assert {
         "Name": "Sam",
@@ -164,7 +156,7 @@ def test_select_doc_using_asterisk() -> None:
     ],
 )
 def test_select_specific_object_doc_using_named_asterisk(query: str) -> None:
-    result = S3SelectParser(source_data={"s3object": json_as_lines}).parse(query)
+    result = S3SelectParser(source_data=json_as_lines).parse(query)
     assert len(result) == 7
     assert {"my_n": "Sam"} in result
     assert {"my_n": "Jeff"} in result
@@ -175,7 +167,7 @@ def test_select_specific_object_doc_using_named_asterisk(query: str) -> None:
     ["select * from s3object[*].Name my_n", "select * from s3object[*].Name as my_n"],
 )
 def test_select_nested_object_using_named_asterisk(query: str) -> None:
-    result = S3SelectParser(source_data={"s3object": json_as_lines}).parse(query)
+    result = S3SelectParser(source_data=json_as_lines).parse(query)
     assert len(result) == 7
     assert {"_1": "Sam"} in result
     assert {"_1": "Jeff"} in result
@@ -183,9 +175,7 @@ def test_select_nested_object_using_named_asterisk(query: str) -> None:
 
 def test_select_list_using_asterisk() -> None:
     query = "select * from s3object[*] s"
-    result = S3SelectParser(
-        source_data={"s3object": json.dumps(input_with_lists)}
-    ).parse(query)
+    result = S3SelectParser(source_data=json.dumps(input_with_lists)).parse(query)
     assert result == [{"_1": input_with_lists}]
 
 
@@ -194,7 +184,23 @@ def test_select_list_using_asterisk() -> None:
     ["select * from s3object[*].staff s", "select * from s3object[*].staff[*] s"],
 )
 def test_select_nested_list_using_asterisk(query: str) -> None:
-    result = S3SelectParser(
-        source_data={"s3object": json.dumps(input_with_lists)}
-    ).parse(query)
+    result = S3SelectParser(source_data=json.dumps(input_with_lists)).parse(query)
     assert result == [{}]
+
+
+def test_nested_where_clause() -> None:
+    query = "select * from s3object[*] s where s.c = 'd2'"
+    doc = "".join(
+        [json.dumps(x) for x in [{"a": {f"b{i}": "s"}, "c": f"d{i}"} for i in range(5)]]
+    )
+    result = S3SelectParser(source_data=doc).parse(query)
+    assert result == [{"a": {"b2": "s"}, "c": "d2"}]
+
+
+def test_nested_from_clause() -> None:
+    query = "select * from s3object[*].a"
+    doc = "".join(
+        [json.dumps(x) for x in [{"a": {f"b{i}": "s"}, "c": f"d{i}"} for i in range(5)]]
+    )
+    result = S3SelectParser(source_data=doc).parse(query)
+    assert {"b2": "s"} in result

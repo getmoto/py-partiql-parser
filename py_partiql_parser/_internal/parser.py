@@ -6,10 +6,11 @@ from ..exceptions import ParserException
 from .delete_parser import DeleteParser
 from .from_parser import DynamoDBFromParser, S3FromParser, FromParser
 from .insert_parser import InsertParser
-from .select_parser import SelectParser
+from .json_parser import JsonParser
+from .select_parser import DynamoDBSelectParser, S3SelectClauseParser
 from .update_parser import UpdateParser
 from .where_parser import DynamoDBWhereParser, S3WhereParser, WhereParser
-from .utils import is_dict, QueryMetadata, CaseInsensitiveDict
+from .utils import QueryMetadata, CaseInsensitiveDict
 
 
 TYPE_RESPONSE = Tuple[
@@ -19,38 +20,42 @@ TYPE_RESPONSE = Tuple[
 
 
 class S3SelectParser:
-    def __init__(self, source_data: Dict[str, str]):
-        # Source data is in the format: {source: json}
-        # Where 'json' is one or more json documents separated by a newline
+    def __init__(self, source_data: str):
+        # Source data is  one or more json documents
         self.documents = source_data
         self.table_prefix = "s3object"
+        self.bytes_scanned = 0
 
     def parse(self, query: str) -> List[Dict[str, Any]]:
         query = query.replace("\n", " ")
         clauses = re.split("SELECT | FROM | WHERE ", query, flags=re.IGNORECASE)
         # First clause is whatever comes in front of SELECT - which should be nothing
         _ = clauses[0]
-        # FROM
+
         from_parser = S3FromParser(from_clause=clauses[2])
-
-        source_data = from_parser.get_source_data(self.documents)
-        if is_dict(source_data):
-            source_data = [source_data]
-
-        # WHERE
-        if len(clauses) > 3:
-            where_clause = clauses[3]
-            source_data = S3WhereParser(source_data).parse(where_clause)
-
-        # SELECT
-        select_clause = clauses[1]
         table_prefix = self.table_prefix
         for alias_key, alias_value in from_parser.clauses.items():
-            if table_prefix == alias_value:
+            if table_prefix == alias_value or f"{table_prefix}[*]" == alias_value:
                 table_prefix = alias_key
-        return SelectParser(table_prefix).parse(
-            select_clause, from_parser.clauses, source_data
-        )
+
+        results: List[Any] = []
+
+        for doc, tokens_parsed in JsonParser.parse_with_tokens(self.documents):
+            doc = from_parser.get_source_data(doc)
+            self.bytes_scanned += tokens_parsed
+
+            if len(clauses) > 3:
+                where_clause = clauses[3]
+                if not S3WhereParser.applies(doc, table_prefix, where_clause):
+                    continue
+
+            select_clause = clauses[1]
+
+            S3SelectClauseParser(table_prefix).parse(
+                select_clause, from_parser.clauses, doc, results
+            )
+
+        return results
 
 
 class DynamoDBStatementParser:
@@ -116,7 +121,7 @@ class DynamoDBStatementParser:
 
         # SELECT
         select_clause = clauses[1]
-        queried_data = SelectParser().parse(
+        queried_data = DynamoDBSelectParser().parse(
             select_clause, from_parser.clauses, source_data
         )
         updates: Dict[

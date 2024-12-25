@@ -1,7 +1,6 @@
-from typing import Any, Dict
+from typing import Any, Dict, List, Union
 
 from .clause_tokenizer import ClauseTokenizer
-from .json_parser import JsonParser
 from .utils import CaseInsensitiveDict
 
 from ..exceptions import ParserException
@@ -75,79 +74,53 @@ class FromParser:
 
 
 class S3FromParser(FromParser):
-    def get_source_data(self, documents: Dict[str, str]) -> Any:
-        from_alias = list(self.clauses.keys())[0].lower()
+    def get_source_data(
+        self, document: Union[CaseInsensitiveDict, List[CaseInsensitiveDict]]
+    ) -> Any:
         from_query = list(self.clauses.values())[0].lower()
         if "." in from_query:
-            return self._get_nested_source_data(documents)
+            return self._get_nested_source_data(document)
 
-        key_has_asterix = from_query.endswith("[*]")
-        from_query = from_query[0:-3] if key_has_asterix else from_query
-        from_alias = from_alias[0:-3] if from_alias.endswith("[*]") else from_alias
-        doc_is_list = documents[from_query].startswith("[") and documents[
-            from_query
-        ].endswith("]")
-
-        source_data = list(JsonParser.parse(documents[from_query]))
-
-        if doc_is_list:
-            return {"_1": source_data[0]}
-        elif from_alias:
-            return [CaseInsensitiveDict({from_alias: doc}) for doc in source_data]
+        if isinstance(document, list):
+            return {"_1": document}
         else:
-            return source_data
+            return document
 
-    def _get_nested_source_data(self, documents: Dict[str, Any]) -> Any:
+    def _get_nested_source_data(
+        self, document: Union[CaseInsensitiveDict, List[CaseInsensitiveDict]]
+    ) -> Any:
         """
         Our FROM-clauses are nested, meaning we need to dig into the provided document to return the key that we need
            --> FROM s3object.name as name
         """
-        root_doc = True
-        source_data = documents
-        iterate_over_docs = False
         entire_key = list(self.clauses.values())[0].lower().split(".")
+        if entire_key[0].lower() in ["s3object[*]"]:
+            entire_key = entire_key[1:]
         alias = list(self.clauses.keys())[0]
         if alias.endswith("[*]"):
             alias = alias[0:-3]
         key_so_far = []
         for key in entire_key:
             key_so_far.append(key)
-            key_has_asterix = key.endswith("[*]") and key[0:-3] in source_data
-            new_key = key[0:-3] if key_has_asterix else key
-            if iterate_over_docs and isinstance(source_data, list):  # type: ignore[unreachable]
-                # The previous key ended in [*]
-                # Iterate over all docs in the result, and only return the requested source key
-                if key_so_far == entire_key:  # type: ignore[unreachable]
-                    # If we have an alias, we have to use that instead of the original name
-                    source_data = [{alias: doc.get(new_key, {})} for doc in source_data]
-                else:
-                    source_data = [
-                        doc.get_original(new_key) or CaseInsensitiveDict({})
-                        for doc in source_data
-                    ]
+
+            if key in document:
+                document = document[key]
+                if isinstance(document, list):
+                    # AWS behaviour when the root-document is a list
+                    document = CaseInsensitiveDict({"_1": document[0]})
+                elif key_so_far == entire_key:
+                    if list(self.clauses.keys()) == list(self.clauses.values()):
+                        # self.clauses contains the same from_clause if no alias is provided
+                        # FROM s3object.a
+                        pass
+                    else:
+                        # An alias has been provided, and the subsequent WHERE/SELECT clauses should use it
+                        # FROM s3object as s WHERE s.x = '..'
+                        document = CaseInsensitiveDict({alias: document})
             else:
-                # The previous key was a regular key
-                # Assume that the result consists of a singular JSON document
-                if new_key in source_data:
-                    doc_is_list = source_data[new_key].startswith("[") and source_data[
-                        new_key
-                    ].endswith("]")
-                    source_data = list(JsonParser.parse(source_data[new_key]))  # type: ignore
-                    if root_doc and doc_is_list:
-                        # AWS behaviour when the root-document is a list
-                        source_data = {"_1": source_data[0]}  # type: ignore
-                    elif key_so_far == entire_key:
-                        if isinstance(source_data, list):  # type: ignore[unreachable]
-                            source_data = [{alias: doc} for doc in source_data]  # type: ignore[unreachable]
-                        else:
-                            source_data = {alias: source_data}
-                else:
-                    source_data = {}
+                document = CaseInsensitiveDict()
 
-            iterate_over_docs = key_has_asterix
-            root_doc = False
-
-        return source_data
+        return document
 
 
 class DynamoDBFromParser(FromParser):

@@ -1,5 +1,5 @@
 from json import JSONEncoder
-from typing import Any, List, Iterator, Optional
+from typing import Any, List, Iterator, Optional, Tuple
 
 from .clause_tokenizer import ClauseTokenizer
 from .utils import CaseInsensitiveDict, Variable
@@ -24,6 +24,17 @@ class JsonParser:
             result = JsonParser._get_next_document(original, tokenizer)
             if result is not None:
                 yield result
+
+    @staticmethod
+    def parse_with_tokens(original: str) -> Iterator[Tuple[Any, int]]:  # type: ignore[misc]
+        """
+        Parse JSON string. Returns a tuple of (json_doc, nr_of_bytes_processed)
+        """
+        tokenizer = ClauseTokenizer(original)
+        while tokenizer.current() is not None:
+            result = JsonParser._get_next_document(original, tokenizer)
+            if result is not None:
+                yield result, tokenizer.get_tokens_parsed()
 
     @staticmethod
     def _get_next_document(  # type: ignore[misc]

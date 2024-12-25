@@ -5,7 +5,7 @@ from . import json_as_lines
 
 class TestCount:
     def setup_method(self) -> None:
-        self.parser = S3SelectParser(source_data={"s3object": json_as_lines})
+        self.parser = S3SelectParser(source_data=json_as_lines)
 
     @pytest.mark.parametrize(
         "query,key,result",
