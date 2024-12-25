@@ -1,6 +1,14 @@
 CHANGELOG
 =========
 
+0.6.1
+-----
+ - Fix project build
+
+0.6.0
+-----
+ - S3SelectParser now returns the number of BytesProcessed
+
 0.5.6
 -----
  - DynamoDB table names can now be MixedCased

@@ -1,4 +1,4 @@
-__version__ = "0.5.6"
+__version__ = "0.6.1"
 
 
 from ._internal.parser import DynamoDBStatementParser, S3SelectParser  # noqa
