@@ -180,6 +180,9 @@ class JsonParser:
                 current_phrase = ""
                 section = None
                 tokenizer.skip_white_space()
+            elif c == "." and section == "INT_VALUE":
+                section = "VAR_VALUE"
+                current_phrase += c
             elif c == "," and not section:
                 tokenizer.skip_white_space()
             elif not section:
