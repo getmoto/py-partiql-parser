@@ -322,7 +322,7 @@ class DynamoDBWhereParser(WhereParser):
 
 class S3WhereParser(WhereParser):
     @classmethod
-    def applies(cls, doc: Any, table_prefix: str, _where_clause: str) -> bool:  # type: ignore[misc]
+    def applies(cls, doc: Any, table_prefix: str, _where_clause: str) -> bool:
         where_clause = WhereParser.parse_where_clause(_where_clause)
 
         if isinstance(where_clause, WhereClause):
