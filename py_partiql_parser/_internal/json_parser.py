@@ -15,7 +15,7 @@ class JsonParser:
     """
 
     @staticmethod
-    def parse(original: str) -> Iterator[Any]:  # type: ignore[misc]
+    def parse(original: str) -> Iterator[Any]:
         if not (original.startswith("{") or original.startswith("[")):
             # Doesn't look like JSON - let's return as a variable
             yield original if original.isnumeric() else Variable(original)
@@ -26,7 +26,7 @@ class JsonParser:
                 yield result
 
     @staticmethod
-    def parse_with_tokens(original: str) -> Iterator[Tuple[Any, int]]:  # type: ignore[misc]
+    def parse_with_tokens(original: str) -> Iterator[Tuple[Any, int]]:
         """
         Parse JSON string. Returns a tuple of (json_doc, nr_of_bytes_processed)
         """
@@ -37,7 +37,7 @@ class JsonParser:
                 yield result, tokenizer.get_tokens_parsed()
 
     @staticmethod
-    def _get_next_document(  # type: ignore[misc]
+    def _get_next_document(
         original: str,
         tokenizer: ClauseTokenizer,
         only_parse_initial: bool = False,
@@ -135,7 +135,7 @@ class JsonParser:
         return result
 
     @staticmethod
-    def _parse_list(original: str, tokenizer: ClauseTokenizer) -> List[Any]:  # type: ignore
+    def _parse_list(original: str, tokenizer: ClauseTokenizer) -> List[Any]:
         result: List[Any] = list()
         section = None
         current_phrase = ""
