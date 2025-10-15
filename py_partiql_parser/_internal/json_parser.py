@@ -8,6 +8,14 @@ ACCEPTED_QUOTES = ["'", '"', "’"]
 NEW_LINE = "\n"
 
 
+def int_or_float(val: str) -> float:
+    return float(val) if "." in val else int(val)
+
+
+def is_numeric(char: str) -> bool:
+    return char.startswith("-") or char.isnumeric()
+
+
 class JsonParser:
     """
     Input can be a multiple documents, separated by a new-line (\n) characters
@@ -18,7 +26,7 @@ class JsonParser:
     def parse(original: str) -> Iterator[Any]:
         if not (original.startswith("{") or original.startswith("[")):
             # Doesn't look like JSON - let's return as a variable
-            yield original if original.isnumeric() else Variable(original)
+            yield original if is_numeric(original) else Variable(original)
         tokenizer = ClauseTokenizer(original)
         while tokenizer.current() is not None:
             result = JsonParser._get_next_document(original, tokenizer)
@@ -93,7 +101,7 @@ class JsonParser:
                 level -= 1
                 # End of a variable/number
                 if section == "INT_VALUE":
-                    result[dict_key] = int(current_phrase)
+                    result[dict_key] = int_or_float(current_phrase)
                 elif current_phrase.lower() in ["true", "false"]:
                     result[dict_key] = current_phrase.lower() == "true"
                 else:
@@ -106,7 +114,7 @@ class JsonParser:
                     tokenizer.revert()
             elif c in [","] and section in ["VAR_VALUE", "INT_VALUE"]:
                 if section == "INT_VALUE":
-                    result[dict_key] = int(current_phrase)
+                    result[dict_key] = int_or_float(current_phrase)
                 elif current_phrase.lower() in ["true", "false"]:
                     result[dict_key] = current_phrase.lower() == "true"
                 else:
@@ -126,10 +134,7 @@ class JsonParser:
                 if section == "KEY_TO_VALUE":
                     # We found a value directly after the key, unquoted
                     # That means it's either a variable, or a number
-                    if c.isnumeric():
-                        section = "INT_VALUE"
-                    else:
-                        section = "VAR_VALUE"
+                    section = "INT_VALUE" if is_numeric(c) else "VAR_VALUE"
                 if section in ["DICT_KEY", "DICT_VAL", "INT_VALUE", "VAR_VALUE"]:
                     current_phrase += c
         return result
@@ -162,17 +167,17 @@ class JsonParser:
                 section = None
             elif c == "]" and not section:
                 return result
-            elif c == "]" and section == "VAR_VALUE":
-                if current_phrase.isnumeric():
-                    result.append(int(current_phrase))
+            elif c == "]" and section in ["INT_VALUE", "VAR_VALUE"]:
+                if section == "INT_VALUE":
+                    result.append(int_or_float(current_phrase))
                 elif current_phrase.lower() in ["true", "false"]:
                     result.append(current_phrase.lower() == "true")
                 else:
                     result.append(Variable(current_phrase))
                 return result
-            elif c == "," and section == "VAR_VALUE":
-                if current_phrase.isnumeric():
-                    result.append(int(current_phrase))
+            elif c == "," and section in ["INT_VALUE", "VAR_VALUE"]:
+                if section == "INT_VALUE":
+                    result.append(int_or_float(current_phrase))
                 elif current_phrase.lower() in ["true", "false"]:
                     result.append(current_phrase.lower() == "true")
                 else:
@@ -184,8 +189,8 @@ class JsonParser:
                 tokenizer.skip_white_space()
             elif not section:
                 current_phrase += c
-                section = "VAR_VALUE"
-            elif section in ["VALUE", "VAR_VALUE"]:
+                section = "INT_VALUE" if is_numeric(c) else "VAR_VALUE"
+            elif section in ["VALUE", "INT_VALUE", "VAR_VALUE"]:
                 current_phrase += c
         return result
 

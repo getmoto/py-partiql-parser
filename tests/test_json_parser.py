@@ -137,6 +137,27 @@ def test_multiline_bool_parser() -> None:
     assert list(JsonParser.parse(combined)) == [obj1, obj2]
 
 
+@pytest.mark.parametrize(
+    "source",
+    [
+        {"sth": 1},
+        {"sth": 1, "other": "y"},
+        {"sth": 1.7},
+        {"sth": 1.7, "other": "y"},
+        [{"staff": [{"name": "J M", "age": 75}]}],
+        [{"staff": [{"name": "J M", "age": 75.2}]}],
+        {"sth": [1, 1.7]},
+        {"sth": ["asdf", 1.7]},
+        {"sth": ["asdf", 1]},
+        {"sth": [1, "asdf"]},
+        {"sth": [-1, "asdf"]},
+        {"sth": [-1.4, "asdf"]},
+    ],
+)
+def test_numbers(source: Any) -> None:  # type: ignore[misc]
+    assert list(JsonParser.parse(json.dumps(source))) == [source]
+
+
 @pytest.mark.parametrize("nr_of_docs", [1, 25, 2500])
 def test_large_object(nr_of_docs: int) -> None:
     data = "".join(
