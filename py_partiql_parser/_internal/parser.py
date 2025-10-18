@@ -2,7 +2,7 @@ import re
 
 from typing import Dict, Any, List, Optional, Tuple
 
-from ..exceptions import ParserException
+from ..exceptions import DocumentNotFoundException, ParserException
 from .delete_parser import DeleteParser
 from .from_parser import DynamoDBFromParser, S3FromParser, FromParser
 from .insert_parser import InsertParser
@@ -110,7 +110,10 @@ class DynamoDBStatementParser:
         # FROM
         from_parser = DynamoDBFromParser(from_clause=clauses[2])
 
-        source_data = self.documents[list(from_parser.clauses.values())[0]]
+        table_name = list(from_parser.clauses.values())[0]
+        if table_name not in self.documents:
+            raise DocumentNotFoundException(name=table_name)
+        source_data = self.documents[table_name]
 
         # WHERE
         if len(clauses) > 3:

@@ -1,6 +1,6 @@
 [project]
 name = "py-partiql-parser"
-version = "0.6.2"
+version = "0.6.3"
 description = "Pure Python PartiQL Parser"
 readme = "README.md"
 keywords = ["pypartiql", "parser"]
