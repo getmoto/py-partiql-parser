@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+0.6.3
+-----
+ - The DynamoDBStatementParser will now throw a DocumentNotFoundException if the table referenced in the statement was not provided
+
 0.6.2
 -----
  - Support negative numbers (both integers and floats)
