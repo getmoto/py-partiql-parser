@@ -10,7 +10,7 @@ import json
 from py_partiql_parser import S3SelectParser
 
 original_json = json.dumps({"a1": "b1", "a2": "b2"})
-parser = S3SelectParser(source_data={"s3object": original_json})
+parser = S3SelectParser(source_data=original_json)
 result = parser.parse("SELECT * FROM s3object")
 ```
 ## DynamoDB Usage
@@ -18,7 +18,7 @@ result = parser.parse("SELECT * FROM s3object")
 import json
 from py_partiql_parser import DynamoDBStatementParser
 
-parser = DynamoDBStatementParser(source_data={"table1": {"a1": {"S": "b1"}, "a2": {"S": "b2"}}})
+parser = DynamoDBStatementParser(source_data={"table1": [{"a1": {"S": "b1"}, "a2": {"S": "b2"}}]})
 result = parser.parse("SELECT * from table1 WHERE a1 = ?", parameters=[{"S": "b1"}])
 ```
 
